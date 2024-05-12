@@ -1,0 +1,7 @@
+mnemonic<1,>=0.21
+opencv-python<5,>=4
+pycryptodome<4,>=3
+PyQRCode<2,>=1
+pypng>=0
+PyQt6>=6.7.0
+pyqtdarktheme<3,>=2
