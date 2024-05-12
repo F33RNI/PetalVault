@@ -877,7 +877,7 @@ class GUIMainWindow(QMainWindow):
         """Asks user to select device or create a new one, calculates difference and sends actions as QR codes
 
         Args:
-            clean_device (bool, optional): True to ask for a new device instead of selecting. Defaults to True
+            clean_device (bool, optional): True to just export without selecting a new device. Defaults to True
         """
         if not self._vault or not self._vault.get("entries"):
             return
@@ -885,7 +885,7 @@ class GUIMainWindow(QMainWindow):
         device_entries = []
         device_name = None
 
-        # Ask user for existing devices
+        # Ask user for existing devices or create a new one
         if not clean_device:
             devices = list(self._vault.get("devices", {}).keys())
             if len(devices) != 0:
@@ -899,23 +899,27 @@ class GUIMainWindow(QMainWindow):
                     logging.debug(f"Selected device: {device_name}")
                     device_entries = self._vault.get("devices", {})[device_name]
 
-        # Create a new device
-        if not device_name:
-            device_name_ = QInputDialog().getText(
-                self,
-                self.translator.get("new_device_title"),
-                self.translator.get("new_device_label"),
-            )
-            if not device_name_ or not device_name_[0].strip():
-                logging.debug("No device name provided")
-                return
+            # Create a new device
+            if not device_name:
+                device_name_ = QInputDialog().getText(
+                    self,
+                    self.translator.get("new_device_title"),
+                    self.translator.get("new_device_label"),
+                )
+                if not device_name_ or not device_name_[0].strip():
+                    logging.debug("No device name provided")
+                    return
 
-            device_name = device_name_[0].strip()
+                device_name = device_name_[0].strip()
 
-            # Show mnemonic
+                # Show mnemonic
+                self._show_mnemonic()
+
+            logging.debug(f"Current number of entries on {device_name}: {len(device_entries)}")
+
+        # Pure export -> show mnemonic
+        else:
             self._show_mnemonic()
-
-        logging.debug(f"Current number of entries on {device_name}: {len(device_entries)}")
 
         # Build lists of unique IDs
         device_entry_ids = []
@@ -949,25 +953,34 @@ class GUIMainWindow(QMainWindow):
 
         # Check if we have anything to sync
         if len(actions) == 0:
-            text = self.translator.get("nothing_to_sync").format(device_name=device_name)
+            if device_name:
+                text = self.translator.get("nothing_to_sync").format(device_name=device_name)
+            else:
+                text = self.translator.get("nothing_to_export")
             QMessageBox().information(self, text, text)
             return
 
         # Show QR codes (blocking)
         self.view_dialogue.exec(
             self.translator.get("qr_viewer_actions_title"),
-            self.translator.get("qr_viewer_actions_description").format(device_name=device_name),
+            self.translator.get("qr_viewer_actions_description").format(
+                device_name=device_name if device_name else ""
+            ),
             actions=actions,
         )
 
         # Save
-        if "devices" not in self._vault:
-            self._vault["devices"] = {}
-        self._vault["devices"][device_name] = self._vault.get("entries", {})
-        self._vault_save(filepath=self._vault.get("path"))
+        if device_name:
+            if "devices" not in self._vault:
+                self._vault["devices"] = {}
+            self._vault["devices"][device_name] = self._vault.get("entries", {})
+            self._vault_save(filepath=self._vault.get("path"))
 
         # Done
-        text = self.translator.get("synced").format(device_name=device_name)
+        if device_name:
+            text = self.translator.get("synced_with").format(device_name=device_name)
+        else:
+            text = self.translator.get("exported")
         QMessageBox().information(self, text, text)
 
         # Refresh
@@ -1132,6 +1145,7 @@ class GUIMainWindow(QMainWindow):
         self.act_close.setEnabled(show)
         self.act_rename.setEnabled(show)
         self.act_delete.setEnabled(show)
+        self.act_export.setEnabled(show)
 
         # Disable delete device (but not enable it)
         if not show:

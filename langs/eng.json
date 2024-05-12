@@ -94,8 +94,10 @@
     "mnemonic": "Mnemonic phrase\nPlease keep this secret!",
     "new_device": "Create new device",
     "select_device": "Select device or create a new one",
-    "synced": "Entries are synced with {device_name}",
+    "exported": "Vault data was exported",
+    "synced_with": "Entries are synced with {device_name}",
     "nothing_to_sync": "Nothing to sync with {device_name}",
+    "nothing_to_export": "Nothing to export",
     "start": "To start, open, import or create a vault",
     "report_issue": "Report issue",
     "about": "Secure cold password manager with QR code-based synchronization\n\nDevelopment: Fern Lane\nLicense: GPL v3.0\n\nhttps://github.com/F33RNI/PetalVault"
