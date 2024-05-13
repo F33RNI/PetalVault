@@ -1,6 +1,8 @@
 .venv
 venv
 __pycache__
+dist
+build
 test.*
 test*.*
 config.json
