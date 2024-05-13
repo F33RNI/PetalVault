@@ -433,7 +433,7 @@ class GUIMainWindow(QMainWindow):
 
                 except Exception as e:
                     logging.error("Unable to decrypt mnemonic", exc_info=e)
-                    self._error_wrapper(self.translator.get("error_wrong_mnemo"), exception_text=str(e))
+                    self._error_wrapper(self.translator.get("error_wrong_master_password"), exception_text=str(e))
                     return
 
                 # Save mnemonic and
@@ -453,7 +453,7 @@ class GUIMainWindow(QMainWindow):
 
                     entry_decrypted = decrypt_entry(entry, self._vault["entropy"])
                     if not entry_decrypted:
-                        continue
+                        raise Exception(f"Unable to decrypt {unique_id} entry")
 
                     # Add
                     entries_decrypted.append(entry_decrypted)
@@ -462,7 +462,11 @@ class GUIMainWindow(QMainWindow):
 
             except Exception as e:
                 logging.error("Error opening vault", exc_info=e)
-                self._error_wrapper(self.translator.get("error_open_vault"), exception_text=str(e))
+                self._error_wrapper(
+                    self.translator.get("error_open_vault_title"),
+                    self.translator.get("error_open_vault_description"),
+                    exception_text=str(e),
+                )
                 self._close_vault()
                 return
 
