@@ -18,10 +18,8 @@ jobs:
     - uses: actions/setup-python@v5
       with:
         python-version: '3.11'
-    - run: python main.py --version
-    - run: python -m venv venv
-    - run: source venv/bin/activate
     - run: pip install -r requirements.txt
+    - run: python main.py --version
     - run: pip install pyinstaller
     - run: pyinstaller main.spec
     - run: mv `ls -d dist/petalvault*` dist/petalvault
