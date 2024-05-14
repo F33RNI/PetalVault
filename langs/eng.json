@@ -101,5 +101,5 @@
     "nothing_to_export": "Nothing to export",
     "start": "To start, open, import or create a vault",
     "report_issue": "Report issue",
-    "about": "Secure cold password manager with QR code-based synchronization\n\nDevelopment: Fern Lane\nLicense: GPL v3.0\n\nhttps://github.com/F33RNI/PetalVault"
+    "about": "Secure cold password manager with AES+BIP39 encryption and QR code-based synchronization\n\nDevelopment: Fern Lane\nLicense: GPL v3.0\n\nhttps://github.com/F33RNI/PetalVault"
 }
