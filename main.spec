@@ -24,6 +24,10 @@ import PyInstaller.config
 # Set working path
 PyInstaller.config.CONF["workpath"] = "./build"
 
+# Parse version from _version.py file
+with open("_version.py", "r", encoding="utf-8") as file:
+    version = file.read().strip().split("__version__")[-1].split('"')[1]
+
 SOURCE_FILES = [
     "main.py",
     "clear_layout.py",
@@ -42,7 +46,7 @@ SOURCE_FILES = [
 ]
 
 # Final name
-COMPILE_NAME = f"petalvault-{platform.system()}-{platform.machine()}".lower()
+COMPILE_NAME = f"petalvault-{version}-{platform.system()}-{platform.machine()}".lower()
 
 # Files and folders to include inside builded binary
 INCLUDE_FILES = [
