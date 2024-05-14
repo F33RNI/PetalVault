@@ -21,8 +21,8 @@ import signal
 import sys
 
 from _version import __version__
-from config_manager import ConfigManager
-from gui_wrapper import GUIWrapper
+
+# Imports moved from here to main() to be able to check version without PyQt6
 
 DIR_DEFAULT = os.path.join(os.path.expanduser("~"), ".petalvault")
 
@@ -65,6 +65,11 @@ def main() -> None:
     if not os.path.exists(args.app_dir):
         logging.debug(f"Creating {args.app_dir} directory")
         os.makedirs(args.app_dir)
+
+    # pylint: disable=import-outside-toplevel
+    from config_manager import ConfigManager
+    from gui_wrapper import GUIWrapper
+    # pylint: enable=import-outside-toplevel
 
     # Initialize class instances
     config_manager_ = ConfigManager(config_file=os.path.join(args.app_dir, "config.json"))
