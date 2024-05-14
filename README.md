@@ -1,6 +1,6 @@
 # 🌸 PetalVault
 
-| ![Project logo](icons/icon.svg) | <h3>Secure cold password manager with AES+BIP39 encryption and QR code-based synchronization</h3> |
+| ![Project logo](icons/icon.svg) | <h1>Secure cold password manager with AES+BIP39 encryption and QR code-based synchronization</h1> |
 | ------------------------------- | :-----------------------------------------------------------------------------------------------: |
 
 <div style="width:100%;text-align:center;">
