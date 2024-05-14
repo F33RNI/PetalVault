@@ -977,7 +977,12 @@ class GUIMainWindow(QMainWindow):
         if device_name:
             if "devices" not in self._vault:
                 self._vault["devices"] = {}
-            self._vault["devices"][device_name] = self._vault.get("entries", {})
+            if device_name not in self._vault["devices"]:
+                self._vault["devices"][device_name] = []
+
+            self._vault["devices"][device_name].clear()
+            for entry in self._vault.get("entries", {}):
+                self._vault["devices"][device_name].append(entry.copy())
             self._vault_save(filepath=self._vault.get("path"))
 
         # Done
