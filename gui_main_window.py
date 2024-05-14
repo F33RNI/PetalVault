@@ -275,12 +275,15 @@ class GUIMainWindow(QMainWindow):
         self.menu_recent.setEnabled(len(self._vaults) > 0)
 
     @QtCore.pyqtSlot()
-    def _sync_from(self, save: bool = True, rerender: bool = True) -> None:
+    def _sync_from(self, save: bool = True, rerender: bool = True) -> bool:
         """Reads QR codes and executes all actions
 
         Args:
             save (bool, optional): save vault after. Defaults to True
             rerender (bool, optional): rerender vault after. Defaults to True
+
+        Returns:
+            bool: True in case of success, False if failed
         """
         if not self._vault:
             return
@@ -296,16 +299,20 @@ class GUIMainWindow(QMainWindow):
 
         # pylint: disable=not-an-iterable
         for action in actions:
-            self._vault_action(action, save=False, rerender=False)
+            if not self._vault_action(action, save=False, rerender=False):
+                return False
         # pylint: enable=not-an-iterable
 
         # Save vault
         if save:
-            self._vault_save(filepath=self._vault.get("path"))
+            if not self._vault_save(filepath=self._vault.get("path")):
+                return False
 
         # Update GUI
         if rerender:
             self._render_vault_entries()
+
+        return True
 
     def _delete_device(self, device_name: str) -> None:
         """Deletes device from current vault by name
@@ -434,6 +441,7 @@ class GUIMainWindow(QMainWindow):
                 except Exception as e:
                     logging.error("Unable to decrypt mnemonic", exc_info=e)
                     self._error_wrapper(self.translator.get("error_wrong_master_password"), exception_text=str(e))
+                    self._close_vault()
                     return
 
                 # Save mnemonic and
@@ -577,7 +585,10 @@ class GUIMainWindow(QMainWindow):
 
         # Ask for data (import)
         if from_device:
-            self._sync_from(save=False, rerender=False)
+            if not self._sync_from(save=False, rerender=False):
+                logging.error("Import error")
+                self._close_vault()
+                return
 
         # Save without secrets
         filepath = self._vault_save()
@@ -661,20 +672,23 @@ class GUIMainWindow(QMainWindow):
 
         return None
 
-    def _vault_action(self, action: Dict, save: bool = True, rerender: bool = True) -> None:
+    def _vault_action(self, action: Dict, save: bool = True, rerender: bool = True) -> bool:
         """Applies action to the current vault
 
         Args:
             action (Dict): action as dictionary (encrypted or not)
             save (bool, optional): save vault after. Defaults to True
             rerender (bool, optional): rerender vault after. Defaults to True
+
+        Returns:
+            bool: True in case of success or nothing to do, False if failed
         """
         if not self._vault:
-            return
+            return True
 
         act = action.get("act")
         if not act:
-            return
+            return True
 
         try:
             # Add or sync action
@@ -715,7 +729,7 @@ class GUIMainWindow(QMainWindow):
                 # Encrypt again (to rotate IV)
                 entry_encrypted = encrypt_entry(entry_to_encrypt, self._vault["entropy"])
                 if not entry_encrypted:
-                    return
+                    return False
 
                 # Try to find encrypted entry (to update it)
                 index_encrypted, _ = self._id_to_entry(action["id"])
@@ -743,6 +757,7 @@ class GUIMainWindow(QMainWindow):
         except Exception as e:
             logging.error("Error execution action", exc_info=e)
             self._error_wrapper(self.translator.get("error_action"), exception_text=str(e))
+            return False
 
         # Save vault
         if save:
@@ -751,6 +766,8 @@ class GUIMainWindow(QMainWindow):
         # Update GUI
         if rerender:
             self._render_vault_entries()
+
+        return True
 
     def _render_vault_entries(self, filter_: str or None = None) -> None:
         """Removes all entries and renders them again
