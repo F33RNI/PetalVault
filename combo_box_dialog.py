@@ -21,12 +21,12 @@ from PyQt6.QtWidgets import QComboBox, QDialog, QDialogButtonBox, QVBoxLayout, Q
 from _version import __version__
 
 
-def combo_box_dialogue(parent: QWidget or None, title: str, items: List[str]) -> int or None:
-    """Creates dialogue contains combobox
+def combo_box_dialog(parent: QWidget or None, title: str, items: List[str]) -> int or None:
+    """Creates dialog contains combobox
 
     Args:
         parent (QWidget or None): parent widget
-        title (str): dialogue title
+        title (str): dialog title
         items (List[str]): list of combobox items
 
     Returns:

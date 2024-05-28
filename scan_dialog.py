@@ -35,7 +35,7 @@ STYLESHEET_LABEL_INACTIVE = "background-color: #406e66;"
 STYLESHEET_LABEL_RECEIVED = "background-color: #6ad0be;"
 
 
-class ScanDialogue(QDialog):
+class ScanDialog(QDialog):
     # Connect this to catch result
     result_signal = QtCore.pyqtSignal(object)
 
@@ -153,11 +153,11 @@ class ScanDialogue(QDialog):
         """Starts scanner
 
         Args:
-            title (str): dialogue title text
-            description (str): dialogue description text
+            title (str): dialog title text
+            description (str): dialog description text
             expected_data (str): "mnemonic" or "actions"
 
-        Connect ScanDialogue.result_signal to catch result
+        Connect ScanDialog.result_signal to catch result
         """
         self._expected_data = expected_data
 
@@ -217,7 +217,7 @@ class ScanDialogue(QDialog):
         """Cancels QR scanning (must be connected to self.finished signal)
 
         Args:
-            result (Any): dialogue result object
+            result (Any): dialog result object
         """
         logging.debug(f"Received finished signal. Result: {result}")
 

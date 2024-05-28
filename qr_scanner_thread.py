@@ -31,7 +31,7 @@ WORDLIST_FILE = get_resource_path("wordlist.txt")
 
 
 class QRScannerThread(threading.Thread, QtCore.QObject):
-    # See ScanDialogue for more info
+    # See ScanDialog for more info
     set_image_signal = QtCore.pyqtSignal(QtGui.QImage)
     received_part_flag_signal = QtCore.pyqtSignal(tuple)
     finished_signal = QtCore.pyqtSignal()
@@ -49,7 +49,7 @@ class QRScannerThread(threading.Thread, QtCore.QObject):
         self._camera_index = camera_index
         self._expected_data = expected_data
 
-        # Dialogue result
+        # Dialog result
         self.actions = []
         self.mnemonic = None
         self.exception = None

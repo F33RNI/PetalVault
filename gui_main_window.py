@@ -45,14 +45,14 @@ from PyQt6.QtWidgets import (
 
 from _version import __version__
 from clear_layout import clear_layout
-from combo_box_dialogue import combo_box_dialogue
+from combo_box_dialog import combo_box_dialog
 from config_manager import ConfigManager
 from encrypt_decrypt import decrypt_entry, encrypt_entry
 from get_resource_path import get_resource_path
-from mnemonic_dialogue import MnemonicDialogue
-from scan_dialogue import ScanDialogue
+from mnemonic_dialog import MnemonicDialog
+from scan_dialog import ScanDialog
 from translator import Translator
-from view_dialogue import ViewDialogue
+from view_dialog import ViewDialog
 
 # Maximum length of each data field (in characters)
 LINE_EDIT_MAX_LENGTH = 70
@@ -101,13 +101,13 @@ class GUIMainWindow(QMainWindow):
         self.translator = Translator()
         self.translator.langs_load(self.config_manager.get("langs_dir", LANGUAGES_DIR))
 
-        # Initialize dialogues
-        self.mnemonic_dialogue = MnemonicDialogue(self, self.translator, self.config_manager)
-        self.mnemonic_dialogue.setWindowModality(QtCore.Qt.WindowModality.ApplicationModal)
-        self.scan_dialogue = ScanDialogue(self, self.translator, self.config_manager)
-        self.scan_dialogue.setWindowModality(QtCore.Qt.WindowModality.ApplicationModal)
-        self.view_dialogue = ViewDialogue(self, self.translator, self.config_manager)
-        self.view_dialogue.setWindowModality(QtCore.Qt.WindowModality.ApplicationModal)
+        # Initialize dialogs
+        self.mnemonic_dialog = MnemonicDialog(self, self.translator, self.config_manager)
+        self.mnemonic_dialog.setWindowModality(QtCore.Qt.WindowModality.ApplicationModal)
+        self.scan_dialog = ScanDialog(self, self.translator, self.config_manager)
+        self.scan_dialog.setWindowModality(QtCore.Qt.WindowModality.ApplicationModal)
+        self.view_dialog = ViewDialog(self, self.translator, self.config_manager)
+        self.view_dialog.setWindowModality(QtCore.Qt.WindowModality.ApplicationModal)
 
         # Load GUI from file
         uic.loadUi(GUI_MAIN_FILE, self)
@@ -227,7 +227,7 @@ class GUIMainWindow(QMainWindow):
         """Shows current mnemonic phrase"""
         if not self._vault or "mnemonic" not in self._vault:
             return
-        self.mnemonic_dialogue.exec(
+        self.mnemonic_dialog.exec(
             self._vault["name"],
             self.translator.get("mnemonic"),
             initial_phrase=self._vault["mnemonic"],
@@ -288,7 +288,7 @@ class GUIMainWindow(QMainWindow):
         if not self._vault:
             return
 
-        actions = self.scan_dialogue.exec(
+        actions = self.scan_dialog.exec(
             self.translator.get("qr_scanner_actions_title"),
             self.translator.get("qr_scanner_actions_description_import_sync"),
             "actions",
@@ -378,7 +378,7 @@ class GUIMainWindow(QMainWindow):
         # Ask user for vault
         if not path:
             items = [path_name[1] for path_name in self._vaults]
-            index = combo_box_dialogue(self, self.translator.get("select_vault"), items)
+            index = combo_box_dialog(self, self.translator.get("select_vault"), items)
             path = self._vaults[index][0] if index is not None else None
 
         # User canceled selection
@@ -411,7 +411,7 @@ class GUIMainWindow(QMainWindow):
 
                 # Ask for mnemonic
                 if not master_password:
-                    mnemonic = self.mnemonic_dialogue.exec(
+                    mnemonic = self.mnemonic_dialog.exec(
                         self._vault["name"], self.translator.get("open_vault_mnemonic"), random=False
                     )
                     if mnemonic is None:
@@ -436,7 +436,7 @@ class GUIMainWindow(QMainWindow):
                         mnemonic = mnemonic_unpadded.split(" ")
 
                     # Convert to entropy
-                    entropy = self.mnemonic_dialogue.mnemo.to_entropy(mnemonic)
+                    entropy = self.mnemonic_dialog.mnemo.to_entropy(mnemonic)
 
                 except Exception as e:
                     logging.error("Unable to decrypt mnemonic", exc_info=e)
@@ -531,7 +531,7 @@ class GUIMainWindow(QMainWindow):
 
         # Ask for mnemonic
         text = self.translator.get("open_vault_mnemonic") if from_device else self.translator.get("new_vault_mnemonic")
-        mnemonic = self.mnemonic_dialogue.exec(name, text)
+        mnemonic = self.mnemonic_dialog.exec(name, text)
         if mnemonic is None:
             logging.debug("No mnemonic phrase provided")
             return
@@ -568,7 +568,7 @@ class GUIMainWindow(QMainWindow):
             master_password = master_password[0]
 
         # Temporally save entropy (actual master key)
-        self._vault["entropy"] = self.mnemonic_dialogue.mnemo.to_entropy(mnemonic)
+        self._vault["entropy"] = self.mnemonic_dialog.mnemo.to_entropy(mnemonic)
 
         # Use master password to encrypt mnemonic (POSSIBLY NOT SAFE)
         if master_password:
@@ -911,7 +911,7 @@ class GUIMainWindow(QMainWindow):
             devices = list(self._vault.get("devices", {}).keys())
             if len(devices) != 0:
                 devices.append(self.translator.get("new_device"))
-                device_index = combo_box_dialogue(self, self.translator.get("select_device"), devices)
+                device_index = combo_box_dialog(self, self.translator.get("select_device"), devices)
                 if device_index is None:
                     logging.debug("No device provided")
                     return
@@ -982,7 +982,7 @@ class GUIMainWindow(QMainWindow):
             return
 
         # Show QR codes (blocking)
-        self.view_dialogue.exec(
+        self.view_dialog.exec(
             self.translator.get("qr_viewer_actions_title"),
             self.translator.get("qr_viewer_actions_description").format(
                 device_name=device_name if device_name else ""
@@ -1211,8 +1211,8 @@ class GUIMainWindow(QMainWindow):
         """Shows error message
 
         Args:
-            title (str): dialogue title and main text
-            description (str or None, optional): dialogue description. Defaults to None
+            title (str): dialog title and main text
+            description (str or None, optional): dialog description. Defaults to None
             exception_text (str or None, optional): detailed text. Defaults to None
         """
         error_msg = QMessageBox(self)
@@ -1227,7 +1227,7 @@ class GUIMainWindow(QMainWindow):
 
     @QtCore.pyqtSlot()
     def _report_issue(self) -> None:
-        """Tries to open issues URL in default browser. Also shows information dialogue"""
+        """Tries to open issues URL in default browser. Also shows information dialog"""
         try:
             webbrowser.open("https://github.com/F33RNI/PetalVault/issues", new=2, autoraise=True)
         except Exception as e:
