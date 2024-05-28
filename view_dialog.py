@@ -35,7 +35,7 @@ GUI_VIEW_FILE = get_resource_path(os.path.join("forms", "view.ui"))
 QR_LIMIT_BYTES = 500
 
 
-class ViewDialogue(QDialog):
+class ViewDialog(QDialog):
     def __init__(self, parent: QWidget or None, translator_: Translator, config_manager_: ConfigManager):
         super().__init__(parent)
 
@@ -64,7 +64,7 @@ class ViewDialogue(QDialog):
         self, title: str, description: str, actions: List[Dict] or None = None, mnemonic: List[str] or None = None
     ) -> None:
         """Non-blocking wrapper for _pre_show_or_exec()
-        Opens dialogue and shows 1st QR code
+        Opens dialog and shows 1st QR code
         """
         self._pre_show_or_exec(title, description, actions, mnemonic)
 
@@ -77,7 +77,7 @@ class ViewDialogue(QDialog):
         self, title: str, description: str, actions: List[Dict] or None = None, mnemonic: List[str] or None = None
     ) -> None:
         """Blocking wrapper for _pre_show_or_exec()
-        Opens dialogue and shows 1st QR code
+        Opens dialog and shows 1st QR code
         """
         self._pre_show_or_exec(title, description, actions, mnemonic)
 
@@ -89,11 +89,11 @@ class ViewDialogue(QDialog):
     def _pre_show_or_exec(
         self, title: str, description: str, actions: List[Dict] or None = None, mnemonic: List[str] or None = None
     ):
-        """Prepares dialogue
+        """Prepares dialog
 
         Args:
-            title (str): dialogue title text
-            description (str): dialogue description text
+            title (str): dialog title text
+            description (str): dialog description text
             actions (List[Dict] or None, optional): list of json objects to sync. Defaults to None
             mnemonic (List[str] or None, optional): list of mnemonic words. Defaults to None
         """

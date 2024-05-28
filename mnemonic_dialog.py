@@ -37,15 +37,15 @@ from _version import __version__
 from clear_layout import clear_layout
 from config_manager import ConfigManager
 from get_resource_path import get_resource_path
-from scan_dialogue import ScanDialogue
+from scan_dialog import ScanDialog
 from translator import Translator
-from view_dialogue import ViewDialogue
+from view_dialog import ViewDialog
 
 GUI_MNEMONIC_FILE = get_resource_path(os.path.join("forms", "mnemonic.ui"))
 WORDLIST_FILE = get_resource_path("wordlist.txt")
 
 
-class MnemonicDialogue(QDialog):
+class MnemonicDialog(QDialog):
     result_signal = QtCore.pyqtSignal(object)
 
     def __init__(self, parent: QWidget or None, translator_: Translator, config_manager_: ConfigManager):
@@ -55,13 +55,13 @@ class MnemonicDialogue(QDialog):
         self.config_manager = config_manager_
 
         # QR scanner
-        self.scan_dialogue = ScanDialogue(self, self.translator, self.config_manager)
-        self.scan_dialogue.setWindowModality(QtCore.Qt.WindowModality.ApplicationModal)
-        self.scan_dialogue.result_signal.connect(self._scan_qr_result)
+        self.scan_dialog = ScanDialog(self, self.translator, self.config_manager)
+        self.scan_dialog.setWindowModality(QtCore.Qt.WindowModality.ApplicationModal)
+        self.scan_dialog.result_signal.connect(self._scan_qr_result)
 
         # QR viewer
-        self.view_dialogue = ViewDialogue(self, self.translator, self.config_manager)
-        self.view_dialogue.setWindowModality(QtCore.Qt.WindowModality.ApplicationModal)
+        self.view_dialog = ViewDialog(self, self.translator, self.config_manager)
+        self.view_dialog.setWindowModality(QtCore.Qt.WindowModality.ApplicationModal)
 
         # Clipboard
         self.clipboard = QApplication.clipboard()
@@ -126,7 +126,7 @@ class MnemonicDialogue(QDialog):
         """Blocking wrapper for _pre_show_or_exec()
 
         Returns:
-            List[str] or None: mnemonic phrase as list of words or None in case of dialogue canceled
+            List[str] or None: mnemonic phrase as list of words or None in case of dialog canceled
         """
         cancel_flag = {}
         mnemonic = []
@@ -150,7 +150,7 @@ class MnemonicDialogue(QDialog):
         self._pre_show_or_exec(title, description, initial_phrase, random, read_only)
         super().exec()
 
-        # Recursively block until user cancel dialogue or provide correct data
+        # Recursively block until user cancel dialog or provide correct data
         if len(mnemonic) == 0 and not cancel_flag.get("cancel") and not read_only:
             return self.exec(title, description, initial_phrase, random, read_only)
 
@@ -167,8 +167,8 @@ class MnemonicDialogue(QDialog):
         """Removes previous data and fills it new
 
         Args:
-            title (str): dialogue title text
-            description (str): dialogue description text
+            title (str): dialog title text
+            description (str): dialog description text
             initial_phrase (List[str] or None, optional): list of words to fill in. Defaults to None
             random (bool, optional): True to fill with random data instead of empty one in case of no initial_phrase
             read_only (bool, optional): True to only allow copying and showing QR (no modify). Defaults to False
@@ -225,13 +225,13 @@ class MnemonicDialogue(QDialog):
         if self._closed:
             return
 
-        # User closed read-only dialogue
+        # User closed read-only dialog
         if self._read_only:
             self._closed = True
             self.close()
             return
 
-        # User canceled dialogue
+        # User canceled dialog
         if canceled:
             try:
                 logging.debug("Emitting None to result_signal")
@@ -256,7 +256,7 @@ class MnemonicDialogue(QDialog):
 
     @QtCore.pyqtSlot()
     def _scan_qr(self) -> None:
-        self.scan_dialogue.show(
+        self.scan_dialog.show(
             self.translator.get("qr_scanner_mnemo_title"),
             self.translator.get("qr_scanner_mnemo_description"),
             "mnemonic",
@@ -279,7 +279,7 @@ class MnemonicDialogue(QDialog):
         words = self._check_get()
         if words is None:
             return
-        self.view_dialogue.show(
+        self.view_dialog.show(
             self.translator.get("qr_viewer_mnemo_title"),
             self.translator.get("qr_viewer_mnemo_description"),
             mnemonic=words,
