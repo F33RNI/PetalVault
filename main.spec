@@ -31,18 +31,18 @@ with open("_version.py", "r", encoding="utf-8") as file:
 SOURCE_FILES = [
     "main.py",
     "clear_layout.py",
-    "combo_box_dialogue.py",
+    "combo_box_dialog.py",
     "config_manager.py",
     "encrypt_decrypt.py",
     "get_resource_path.py",
     "gui_main_window.py",
     "gui_wrapper.py",
-    "mnemonic_dialogue.py",
+    "mnemonic_dialog.py",
     "qr_scanner_thread.py",
-    "scan_dialogue.py",
+    "scan_dialog.py",
     "translator.py",
     "_version.py",
-    "view_dialogue.py",
+    "view_dialog.py",
 ]
 
 # Final name
