@@ -11,8 +11,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, ubuntu-latest, macos-latest]
-        architecture: [x64, arm64]
+        include:
+          - os: windows-latest
+            architecture: x64
+          - os: ubuntu-latest
+            architecture: x64
+          - os: ubuntu-latest
+            architecture: arm64
+          - os: macos-latest
+            architecture: x64
+          - os: macos-latest
+            architecture: arm64
 
     runs-on: ${{ matrix.os }}
     name: Build on ${{ matrix.os }} with ${{ matrix.architecture }}
