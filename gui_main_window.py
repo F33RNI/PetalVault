@@ -141,7 +141,6 @@ class GUIMainWindow(QMainWindow):
         self.act_delete.triggered.connect(self._delete_vault)
         self.act_light.triggered.connect(lambda: self._set_theme("light"))
         self.act_dark.triggered.connect(lambda: self._set_theme("dark"))
-        self.act_auto.triggered.connect(lambda: self._set_theme("auto"))
         self.act_issue.triggered.connect(self._report_issue)
         self.act_about.triggered.connect(self._about)
 
@@ -215,10 +214,10 @@ class GUIMainWindow(QMainWindow):
         """Sets GUI theme
 
         Args:
-            theme (str or None, optional): "light", "auto", "dark" or None to load from config. Defaults to None
+            theme (str or None, optional): "light", "dark" or None to load from config. Defaults to None
         """
         if theme is None:
-            theme = self.config_manager.get("theme", "auto")
+            theme = self.config_manager.get("theme", "light")
         else:
             self.config_manager.set("theme", theme)
 
