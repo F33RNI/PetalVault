@@ -11,13 +11,13 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  build_ubuntu:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
     - uses: actions/setup-python@v5
       with:
-        python-version: '3.12'
+        python-version: '3.11'
     - run: pip install -r requirements.txt
     - run: python main.py --version
     - run: pip install pyinstaller
