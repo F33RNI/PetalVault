@@ -67,7 +67,7 @@ jobs:
           --volume "${PWD}/artifacts:/artifacts"
 
         # The shell to run commands with in the container
-        shell: /bin/sh
+        shell: /bin/bash
 
         # Install dependencies in the container
         install: |
