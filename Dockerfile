@@ -10,6 +10,9 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     apt-get install -y git binutils build-essential qt6-base-dev qt6-tools-dev pyqt6-dev-tools python3-pyqt6* && \
     pip install pyinstaller
 
+# Verify qmake installation
+RUN qmake --version
+
 # Install dependencies
 RUN --mount=type=cache,target=/root/.cache/pip \
     --mount=type=bind,source=requirements.txt,target=requirements.txt \
