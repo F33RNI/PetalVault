@@ -6,3 +6,4 @@ build
 test.py
 test*.py
 config.json
+*.xcf
