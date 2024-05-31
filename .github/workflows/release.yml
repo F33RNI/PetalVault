@@ -74,7 +74,7 @@ jobs:
           case "${{ matrix.distro }}" in
             ubuntu*|jessie|stretch|buster|bullseye)
               apt-get update
-              apt-get install -y --no-install-recommends git curl
+              apt-get install -y --no-install-recommends git ca-certificates curl
               curl https://pyenv.run | bash
               pyenv install "3.11.9"
               ;;
