@@ -7,7 +7,7 @@
 FROM python:3.12-slim AS build
 RUN --mount=type=cache,target=/root/.cache/pip \
     apt-get update && \
-    apt-get install -y git binutils build-essential qt6-base-dev qt6-tools-dev pyqt6-dev-tools python3-pyqt6* qtchooser ffmpeg libsm6 libxext6 libgl1 && \
+    apt-get install -y git binutils build-essential qt6-base-dev qt6-tools-dev pyqt6-dev-tools python3-pyqt6* qtchooser ffmpeg libsm6 libxext6 libgl1 libgl1-mesa-dev && \
     pip install pyinstaller
 
 # Fix QT6
