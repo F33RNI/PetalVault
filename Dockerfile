@@ -17,6 +17,7 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 
 # Build
 WORKDIR /src
+COPY . /src/
 ENV AM_I_IN_A_DOCKER_CONTAINER Yes
 RUN pyinstaller /src/main.spec
 
