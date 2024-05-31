@@ -36,7 +36,7 @@ COPY --link --from=python:3.12-slim /lib6[4] /lib64
 COPY --link --from=build /app/dist/petalvault-* /app/petalvault
 
 WORKDIR /app
-COPY forms/ icons/ langs/ /app/
+COPY forms/ icons/ langs/ wordlist.txt /app/
 
 # Run main script
 CMD ["petalvault"]
