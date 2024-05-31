@@ -4,10 +4,10 @@
 # Use buildkit syntax labs
 # https://github.com/moby/buildkit
 
-FROM python:3.11-slim AS build
+FROM python:3.12-slim AS build
 RUN --mount=type=cache,target=/root/.cache/pip \
     apt-get update && \
-    apt-get install -y git binutils build-essential libglx-dev libgl1-mesa-dev qt6-base-dev qt6-tools-dev && \
+    apt-get install -y git binutils build-essential qt6-base-dev qt6-tools-dev && \
     pip install pyinstaller
 
 # Install dependencies
@@ -25,8 +25,8 @@ RUN pyinstaller /src/main.spec
 FROM alpine
 ENV PATH /app:$PATH
 
-COPY --link --from=python:3.11-slim /li[b] /lib
-COPY --link --from=python:3.11-slim /lib6[4] /lib64
+COPY --link --from=python:3.12-slim /li[b] /lib
+COPY --link --from=python:3.12-slim /lib6[4] /lib64
 COPY --link --from=build /app/dist/petalvault-* /app/petalvault
 
 WORKDIR /app
