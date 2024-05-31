@@ -28,7 +28,11 @@ try:
     _LOCALE = locale.getlocale()[0]
 except:
     pass
-LANG_ID_DEFAULT = "rus" if _LOCALE.startswith("ru") else "eng"
+
+try:
+    LANG_ID_DEFAULT = "rus" if _LOCALE.startswith("ru") else "eng"
+except:
+    LANG_ID_DEFAULT = "eng"
 
 CONFIG_DEFAULT = {"version": __version__, "lang_id": LANG_ID_DEFAULT, "camera_index": 0}
 
