@@ -17,7 +17,6 @@ If not, see <http://www.gnu.org/licenses/>.
 import base64
 import functools
 import gc
-import hashlib
 import json
 import logging
 import os
@@ -27,8 +26,6 @@ import webbrowser
 from typing import Dict, List, Tuple
 
 import qdarktheme
-from Crypto.Cipher import AES
-from Crypto.Util import Padding
 from packaging import version
 from PyQt6 import QtCore, QtGui, uic
 from PyQt6.QtGui import QAction
