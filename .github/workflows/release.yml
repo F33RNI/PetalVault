@@ -8,9 +8,6 @@ on:
 
 jobs:
   build:
-    runs-on: ${{ matrix.os }}
-    name: Build on ${{ matrix.os }}
-
     strategy:
       fail-fast: false
       matrix:
@@ -21,6 +18,8 @@ jobs:
           - os: macos-12
           - os: linux
             arch: arm64
+
+    runs-on: ${{ matrix.os }}
 
     steps:
     - uses: actions/checkout@v4
