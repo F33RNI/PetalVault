@@ -24,3 +24,31 @@ jobs:
     - run: pyinstaller main.spec
     - run: mv `ls -d dist/petalvault*` dist/petalvault
     - run: dist/petalvault --version
+
+  build_docker:
+    strategy:
+      matrix:
+        platform:
+          - os: linux
+            arch: amd64
+          - os: linux
+            arch: arm64
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v4
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v3
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    - uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: false
+        load: true
+        tags: petalvault-test-${{ matrix.platform.os }}-${{ matrix.platform.arch}}
+        platforms: ${{ matrix.platform.os }}/${{ matrix.platform.arch}}
+    - run: |
+        docker run --rm "petalvault-test-${{ matrix.platform.os }}-${{ matrix.platform.arch}}" /app/petalvault --version
