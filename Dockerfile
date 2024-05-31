@@ -11,12 +11,12 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     pip install pyinstaller
 
 # Verify qmake installation
-RUN qmake6 --version
+RUN ln -sf $(which qmake6) $(which qmake) && qmake --version
 
 # Install dependencies
 RUN --mount=type=cache,target=/root/.cache/pip \
     --mount=type=bind,source=requirements.txt,target=requirements.txt \
-    pip install -r requirements.txt
+    ln -sf $(which qmake6) $(which qmake) && pip install -r requirements.txt
 
 # Build
 WORKDIR /src
