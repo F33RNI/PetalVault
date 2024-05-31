@@ -20,20 +20,24 @@ import json
 import logging
 import secrets
 import zlib
-from typing import Dict
+from typing import Dict, List, Tuple
 
 from Crypto.Cipher import AES
+from Crypto.Protocol.KDF import scrypt
 from Crypto.Util import Padding
 
 from _version import __version__
 
+# CPU/Memory cost parameter for master key / password derivation
+MASTER_KEY_COST = 2**16
 
-def decrypt_entry(encrypted: Dict, entropy: bytes) -> Dict or None:
+
+def decrypt_entry(encrypted: Dict, master_key: bytes) -> Dict or None:
     """Decrypts and decompresses dictionary data
 
     Args:
-        encrypted (Dict): dictionary that contains "id", "enc" and "iv" keys
-        entropy (bytes): AES key
+        encrypted (Dict): dictionary that contains "enc" and "iv" keys
+        master_key (bytes): mnemonic entropy as AES key (16 bytes) for v<2.0.0 or derived key (16 bytes) for v>=2.0.0
 
     Returns:
         Dict or None: decrypted dictionary or None in case of error
@@ -42,7 +46,7 @@ def decrypt_entry(encrypted: Dict, entropy: bytes) -> Dict or None:
         # Decrypt
         iv_bytes = base64.b64decode(encrypted["iv"].encode("utf-8"))
         entry_encrypted = base64.b64decode(encrypted["enc"].encode("utf-8"))
-        cipher = AES.new(entropy, AES.MODE_CBC, iv=iv_bytes)
+        cipher = AES.new(master_key, AES.MODE_CBC, iv=iv_bytes)
         entry_decrypted = cipher.decrypt(entry_encrypted)
         entry_unpadded = Padding.unpad(entry_decrypted, AES.block_size)
 
@@ -61,9 +65,9 @@ def decrypt_entry(encrypted: Dict, entropy: bytes) -> Dict or None:
         # Convert to dictionary
         entry_dict = json.loads("{" + entry_bytes.decode("utf-8") + "}")
 
-        # Check ID
-        if encrypted["id"] != entry_dict["id"]:
-            raise Exception("Unique IDs don't match")
+        # Check for ID key
+        if "id" not in entry_dict:
+            raise Exception('No "id" key')
 
         return entry_dict
 
@@ -73,15 +77,15 @@ def decrypt_entry(encrypted: Dict, entropy: bytes) -> Dict or None:
     return None
 
 
-def encrypt_entry(decrypted: Dict, entropy: bytes) -> Dict or None:
+def encrypt_entry(decrypted: Dict, master_key: bytes) -> Dict or None:
     """Compresses and encrypts dictionary data
 
     Args:
         decrypted (Dict): decrypted dictionary. Must contains "id" key
-        entropy (bytes): AES key
+        master_key (bytes): mnemonic entropy as AES key (16 bytes) for v<2.0.0 or derived key (16 bytes) for v>=2.0.0
 
     Returns:
-        Dict or None: encrypted dictionary (with "id", "enc" and "iv" keys) or None in case of error
+        Dict or None: encrypted dictionary (with "enc" and "iv" keys) or None in case of error
     """
     try:
         # Convert to bytes and calculate checksum
@@ -96,16 +100,122 @@ def encrypt_entry(decrypted: Dict, entropy: bytes) -> Dict or None:
 
         # Encrypt
         iv_bytes = secrets.token_bytes(16)
-        cipher = AES.new(entropy, AES.MODE_CBC, iv=iv_bytes)
+        cipher = AES.new(master_key, AES.MODE_CBC, iv=iv_bytes)
         entry_encrypted = cipher.encrypt(entry_padded)
 
         # Convert to base64
         enc = base64.b64encode(entry_encrypted).decode("utf-8")
         iv = base64.b64encode(iv_bytes).decode("utf-8")
 
-        return {"id": decrypted["id"], "enc": enc, "iv": iv}
+        return {"enc": enc, "iv": iv}
 
     except Exception as e:
         logging.error(f"Error encrypting {decrypted.get('id', '')} entry", exc_info=e)
 
     return None
+
+
+def encrypt_mnemonic(mnemonic: List[str], master_password: str) -> Tuple[bytes, bytes, bytes]:
+    """Encrypts mnemonic with master password
+
+    Args:
+        mnemonic (List[str]): mnemonic phrase to encrypt as list of words
+        master_password (str): strong master password
+
+    Returns:
+        Tuple[bytes, bytes, bytes]: (padded and encrypted mnemonic with checksum, 32B salt of scrypt, 16B IV of AES)
+    """
+    # Derive key from master password
+    master_salt_1 = secrets.token_bytes(32)
+    derived_key = scrypt(master_password.encode("utf-8"), master_salt_1, 32, N=MASTER_KEY_COST, r=8, p=1)
+
+    # Convert mnemonic to str->bytes, add checksum and pad
+    mnemonic_bytes = " ".join(mnemonic).encode("utf-8")
+    checksum = hashlib.md5(mnemonic_bytes).digest()
+    mnemonic_with_checksum = mnemonic_bytes + checksum
+    mnemonic_padded = Padding.pad(mnemonic_with_checksum, AES.block_size)
+
+    # Encrypt
+    master_salt_2 = secrets.token_bytes(16)
+    cipher = AES.new(derived_key, AES.MODE_CBC, iv=master_salt_2)
+    mnemonic_encrypted = cipher.encrypt(mnemonic_padded)
+
+    return mnemonic_encrypted, master_salt_1, master_salt_2
+
+
+def decrypt_mnemonic(
+    mnemonic_encrypted: bytes, master_password: str, master_salt_1: bytes, master_salt_2: bytes
+) -> List[str]:
+    """Decrypts mnemonic with master password
+
+    Args:
+        mnemonic_encrypted (bytes): padded and encrypted mnemonic with checksum
+        master_password (str): strong master password
+        master_salt_1 (bytes): 32 bytes salt of derived key
+        master_salt_2 (bytes): 16 bytes IV of AES
+
+    Raises:
+        Exception: decrypt / check error
+
+    Returns:
+        List[str]: mnemonic phrase as list of words
+    """
+    # Derive key from master password
+    derived_key = scrypt(master_password.encode("utf-8"), master_salt_1, 32, N=MASTER_KEY_COST, r=8, p=1)
+
+    # Decrypt
+    cipher = AES.new(derived_key, AES.MODE_CBC, iv=master_salt_2)
+    mnemonic_decrypted = cipher.decrypt(mnemonic_encrypted)
+
+    # Unpad and extract checksum
+    mnemonic_unpadded = Padding.unpad(mnemonic_decrypted, AES.block_size)
+    mnemonic_bytes = mnemonic_unpadded[:-16]
+    mnemonic_checksum = mnemonic_unpadded[-16:]
+
+    # Check
+    checksum_new = hashlib.md5(mnemonic_bytes).digest()
+    if checksum_new != mnemonic_checksum:
+        raise Exception("Checksums are not equal! Wrong password?")
+
+    # Convert to list of strings
+    return mnemonic_bytes.decode("utf-8").split(" ")
+
+
+def decrypt_mnemonic_old(mnemonic_encrypted: bytes, master_password: str, iv: bytes) -> List[str]:
+    """Decrypts mnemonic in old way (below v2.0.0)
+
+    Args:
+        mnemonic_encrypted (bytes): padded and encrypted mnemonic
+        master_password (str): strong master password
+        iv (bytes): 16 bytes IV of AES
+
+    Returns:
+        List[str]: mnemonic phrase as list of words
+    """
+    # Convert password to 128 bit key
+    master_password_hash = hashlib.sha256(hashlib.sha256(master_password.encode("utf-8")).digest()).digest()
+    mnemo_key = master_password_hash[-16:]
+
+    # Decrypt mnemonic
+    cipher = AES.new(mnemo_key, AES.MODE_CBC, iv=iv)
+    mnemonic_decrypted = cipher.decrypt(mnemonic_encrypted)
+    mnemonic_unpadded = Padding.unpad(mnemonic_decrypted, AES.block_size)
+
+    # Convert to list of strings
+    return mnemonic_unpadded.decode("utf-8").split(" ")
+
+
+def entropy_to_master_key(entropy: bytes, master_salt: bytes or None = None) -> Tuple[bytes, bytes]:
+    """Derives master key from entropy
+
+    Args:
+        entropy (bytes): 128-bit entropy from mnemonic
+        salt (bytes or None, optional): existing salt (32-bytes) or None to generate a new one. Defaults to None
+
+    Returns:
+        Tuple[bytes, bytes]: (32-bytes master key, 32 - bytes salt)
+    """
+    if master_salt is None:
+        master_salt = secrets.token_bytes(32)
+    master_key = scrypt(entropy, master_salt, 32, N=MASTER_KEY_COST, r=8, p=1)
+    return master_key, master_salt

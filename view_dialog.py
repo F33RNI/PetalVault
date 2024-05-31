@@ -14,6 +14,7 @@ You should have received a copy of the GNU General Public License along with thi
 If not, see <http://www.gnu.org/licenses/>.
 """
 
+import base64
 import datetime
 import json
 import os
@@ -61,12 +62,17 @@ class ViewDialog(QDialog):
         self.installEventFilter(self)
 
     def show(
-        self, title: str, description: str, actions: List[Dict] or None = None, mnemonic: List[str] or None = None
+        self,
+        title: str,
+        description: str,
+        actions: List[Dict] or None = None,
+        sync_salt: bytes or None = None,
+        mnemonic: List[str] or None = None,
     ) -> None:
         """Non-blocking wrapper for _pre_show_or_exec()
         Opens dialog and shows 1st QR code
         """
-        self._pre_show_or_exec(title, description, actions, mnemonic)
+        self._pre_show_or_exec(title, description, actions, sync_salt, mnemonic)
 
         super().show()
 
@@ -74,12 +80,17 @@ class ViewDialog(QDialog):
         self._show_qr()
 
     def exec(
-        self, title: str, description: str, actions: List[Dict] or None = None, mnemonic: List[str] or None = None
+        self,
+        title: str,
+        description: str,
+        actions: List[Dict] or None = None,
+        sync_salt: bytes or None = None,
+        mnemonic: List[str] or None = None,
     ) -> None:
         """Blocking wrapper for _pre_show_or_exec()
         Opens dialog and shows 1st QR code
         """
-        self._pre_show_or_exec(title, description, actions, mnemonic)
+        self._pre_show_or_exec(title, description, actions, sync_salt, mnemonic)
 
         self._index = 0
         self._show_qr()
@@ -87,7 +98,12 @@ class ViewDialog(QDialog):
         super().exec()
 
     def _pre_show_or_exec(
-        self, title: str, description: str, actions: List[Dict] or None = None, mnemonic: List[str] or None = None
+        self,
+        title: str,
+        description: str,
+        actions: List[Dict] or None = None,
+        sync_salt: bytes or None = None,
+        mnemonic: List[str] or None = None,
     ):
         """Prepares dialog
 
@@ -95,9 +111,9 @@ class ViewDialog(QDialog):
             title (str): dialog title text
             description (str): dialog description text
             actions (List[Dict] or None, optional): list of json objects to sync. Defaults to None
+            sync_salt (bytes or None, optional): salt of sync key (all actions must be encrypted). Defaults to None
             mnemonic (List[str] or None, optional): list of mnemonic words. Defaults to None
         """
-
         # Translate buttons
         self.button_box.button(QDialogButtonBox.StandardButton.Close).setText(self.translator.get("btn_close"))
         self.button_box.button(QDialogButtonBox.StandardButton.Save).setText(self.translator.get("btn_save_image"))
@@ -126,7 +142,10 @@ class ViewDialog(QDialog):
             for action in actions:
                 # New QR code
                 if index_data >= len(data_dicts):
-                    data_dicts.append({"i": index_data, "acts": []})
+                    data_dict_temp = {"i": index_data, "acts": []}
+                    if index_data == 0 and sync_salt is not None:
+                        data_dict_temp["salt"] = base64.b64encode(sync_salt).decode("utf-8")
+                    data_dicts.append(data_dict_temp)
 
                 # Append our action
                 data_dicts[index_data]["acts"].append(action)

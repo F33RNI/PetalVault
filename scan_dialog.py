@@ -37,6 +37,7 @@ STYLESHEET_LABEL_RECEIVED = "background-color: #6ad0be;"
 
 class ScanDialog(QDialog):
     # Connect this to catch result
+    # List[str] or Tuple[List[Dict], bytes] or None: mnemonic, (list of actions, sync salt) or None if canceled
     result_signal = QtCore.pyqtSignal(object)
 
     def __init__(self, parent: QWidget or None, translator_: Translator, config_manager_: ConfigManager):
@@ -73,7 +74,7 @@ class ScanDialog(QDialog):
             if self._expected_data == "mnemonic":
                 self.result_signal.emit(self._qr_scanner_thread.mnemonic)
             elif self._expected_data == "actions":
-                self.result_signal.emit(self._qr_scanner_thread.actions)
+                self.result_signal.emit((self._qr_scanner_thread.actions, self._qr_scanner_thread.sync_salt))
             else:
                 self.result_signal.emit(None)
         except Exception as e:
@@ -119,24 +120,33 @@ class ScanDialog(QDialog):
         """Non-blocking wrapper for _pre_show_or_exec()
 
         Connect result_signal to catch result
+        List[str] or Tuple[List[Dict], bytes] or None: mnemonic, (list of actions, sync salt) or None if canceled
         """
         self._pre_show_or_exec(title, description, expected_data)
         super().show()
 
-    def exec(self, title: str, description: str, expected_data: str) -> List[str] or List[Dict] or None:
+    def exec(self, title: str, description: str, expected_data: str) -> List[str] or Tuple[List[Dict], bytes] or None:
         """Blocking wrapper for _pre_show_or_exec()
 
         Returns:
-            List[str] or List[Dict] or None: mnemonic phrase as list of words, list of actions or None if canceled
+            List[str] or Tuple[List[Dict], bytes] or None: mnemonic, (list of actions, sync salt) or None if canceled
         """
-        result = []
+        mnemonic_or_actions = []
+        sync_salt = {"salt": None}
 
         @QtCore.pyqtSlot(object)
-        def _catch_finished(result_: List[str] or List[Dict] or None):
+        def _catch_finished(result_: List[str] or Tuple[List[Dict], bytes] or None):
             if result_ is None:
                 return
-            for data_item in result_:
-                result.append(data_item)
+
+            if isinstance(result_, Tuple):
+                for action in result_[0]:
+                    mnemonic_or_actions.append(action)
+                sync_salt["salt"] = result_[1]
+
+            elif isinstance(result_, List):
+                for word in result_:
+                    mnemonic_or_actions.append(word)
 
         try:
             self.result_signal.disconnect()
@@ -147,7 +157,13 @@ class ScanDialog(QDialog):
         self._pre_show_or_exec(title, description, expected_data)
         super().exec()
 
-        return result if len(result) != 0 else None
+        if len(mnemonic_or_actions) != 0:
+            if expected_data == "mnemonic":
+                return mnemonic_or_actions
+            elif expected_data == "actions":
+                return mnemonic_or_actions, sync_salt["salt"]
+
+        return None
 
     def _pre_show_or_exec(self, title: str, description: str, expected_data: str):
         """Starts scanner
