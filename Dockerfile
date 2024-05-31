@@ -11,7 +11,7 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     pip install pyinstaller
 
 # Verify qmake installation
-RUN qmake --version
+RUN qmake6 --version
 
 # Install dependencies
 RUN --mount=type=cache,target=/root/.cache/pip \
