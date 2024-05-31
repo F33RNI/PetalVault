@@ -1,6 +1,6 @@
 # 🌸 PetalVault
 
-| ![Project logo](icons/icon.svg) | <h1>Secure cold password manager with AES+BIP39 encryption and QR code-based synchronization</h1> |
+| ![Project logo](icons/icon.svg) | <h1>Secure cold password manager with AES+BIP39+scrypt encryption and QR code-based synchronization</h1> |
 | ------------------------------- | :-----------------------------------------------------------------------------------------------: |
 
 <div style="width:100%;text-align:center;">
@@ -8,6 +8,8 @@
         <img src="https://badges.frapsoft.com/os/v1/open-source.png?v=103" >
     </p>
 </div>
+
+![Banner](banner.png)
 
 ----------
 
@@ -35,48 +37,55 @@
 
 ## 🚧 README in progress
 
+![Preview GIF](preview.gif)
+
 Wait for the README or test app yourself 🙃
 
 ----------
 
-## 🏗️ Execute or build from source
+## 🏗️ Launch or build from source
 
-- Install Python (tested on **3.11** only)
-- Clone repo
+- Download latest release from <https://github.com/F33RNI/PetalVault/releases/latest>
+  - Just launch it
 
-    ```shell
-    git clone https://github.com/F33RNI/PetalVault
-    cd PetalVault
-    ```
+- Launch or build from source
 
-- Create virtual environment and install dependencies
+  - Install Python (tested on **3.11** only)
+  - Clone repo
 
-    ```shell
-    python -m venv venv
+      ```shell
+      git clone https://github.com/F33RNI/PetalVault
+      cd PetalVault
+      ```
 
-    # For Linux
-    source venv/bin/activate
+  - Create virtual environment and install dependencies
 
-    # For Windows
-    venv\Scripts\activate.bat
+      ```shell
+      python -m venv venv
 
-    pip install -r requirements.txt --upgrade
-    ```
+      # For Linux
+      source venv/bin/activate
 
-- **Launch** PetalVault
+      # For Windows
+      venv\Scripts\activate.bat
 
-    ```shell
-    python main.py --verbose
-    ```
+      pip install -r requirements.txt --upgrade
+      ```
 
-- **Build** using PyInstaller
+  - **Launch** PetalVault
 
-    ```shell
-    pip install pyinstaller
-    pyinstaller main.spec
+      ```shell
+      python main.py --verbose
+      ```
 
-    # Executable will be inside dist/ directory
-    ```
+  - **Build** using PyInstaller
+
+      ```shell
+      pip install pyinstaller
+      pyinstaller main.spec
+
+      # Executable will be inside dist/ directory
+      ```
 
 ----------
 
