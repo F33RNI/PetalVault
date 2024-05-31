@@ -76,13 +76,13 @@ jobs:
               apt-get update
               apt-get install -y --no-install-recommends git ca-certificates curl
               curl https://pyenv.run | bash
-              "$HOME/.pyenv" install "3.11.9"
+              sudo "$HOME/.pyenv" install "3.11.9"
               ;;
           esac
 
         # Produce a binary artifact and place it in the mounted volume
         run: |
-          sudo "$HOME/.pyenv/versions/3.11.9/bin/python3.11" -m venv venv
+          "$HOME/.pyenv/versions/3.11.9/bin/python3.11" -m venv venv
           source venv/bin/activate
           pip install -r requirements.txt
           pip install pyinstaller
