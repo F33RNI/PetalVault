@@ -18,7 +18,7 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 # Build
 WORKDIR /src
 ENV AM_I_IN_A_DOCKER_CONTAINER Yes
-RUN pyinstaller main.spec
+RUN pyinstaller /src/main.spec
 
 # Build application image
 FROM alpine

@@ -22,7 +22,7 @@ import platform
 import PyInstaller.config
 
 # Set paths for docker
-if os.environ.get('AM_I_IN_A_DOCKER_CONTAINER', False):
+if os.environ.get("AM_I_IN_A_DOCKER_CONTAINER", False):
     PyInstaller.config.CONF["distpath"] = "/app/dist"
     PyInstaller.config.CONF["workpath"] = "/app/build"
 
