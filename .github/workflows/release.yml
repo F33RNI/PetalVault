@@ -19,6 +19,8 @@ jobs:
           - os: ubuntu-latest
           - os: macos-latest
           - os: macos-12
+          - os: linux
+            arch: arm64
 
     steps:
     - uses: actions/checkout@v4
@@ -33,68 +35,3 @@ jobs:
       with:
         files: |
           dist/*
-
-  build_ubuntu_arm:
-    runs-on: ubuntu-latest
-    name: Build on ${{ matrix.distro }} ${{ matrix.arch }}
-
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - arch: aarch64
-            distro: ubuntu_latest
-          - arch: armv7
-            distro: ubuntu_latest
-
-    steps:
-    - uses: actions/checkout@v4
-    - uses: uraimo/run-on-arch-action@v2
-      name: Build artifact
-      id: build
-      with:
-        arch: ${{ matrix.arch }}
-        distro: ${{ matrix.distro }}
-
-        githubToken: ${{ github.token }}
-
-        # Create an artifacts directory
-        setup: |
-          mkdir -p "${PWD}/artifacts"
-
-        # Mount the artifacts directory as /artifacts in the container
-        dockerRunArgs: |
-          --volume "${PWD}/artifacts:/artifacts"
-
-        # The shell to run commands with in the container
-        shell: /bin/bash
-
-        # Install dependencies in the container
-        install: |
-          case "${{ matrix.distro }}" in
-            ubuntu*|jessie|stretch|buster|bullseye)
-              apt-get update
-              apt-get install -y --no-install-recommends git python3 python3-venv python3-pip
-              ;;
-          esac
-
-        # Produce a binary artifact and place it in the mounted volume
-        run: |
-          python3 -m venv venv
-          source venv/bin/activate
-          pip install --upgrade -r requirements.txt
-          pip install pyinstaller
-          pyinstaller main.spec
-          cp dist/* /artifacts
-
-    - name: Show the artifact
-      # Items placed in /artifacts in the container will be in
-      # ${PWD}/artifacts on the host.
-      run: |
-        ls -al "${PWD}/artifacts"
-
-    - name: Release
-      uses: softprops/action-gh-release@v1
-      with:
-        files: |
-          "${PWD}/artifacts"
