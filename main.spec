@@ -24,11 +24,8 @@ import PyInstaller.config
 # Set paths for docker
 if os.environ.get("AM_I_IN_A_DOCKER_CONTAINER", False):
     PyInstaller.config.CONF["distpath"] = "/app/dist"
-    PyInstaller.config.CONF["workpath"] = "/app/build"
 
-# Normal paths
-else:
-    PyInstaller.config.CONF["workpath"] = "./build"
+PyInstaller.config.CONF["workpath"] = "./build"
 
 # Parse version from _version.py file
 with open("_version.py", "r", encoding="utf-8") as file:
