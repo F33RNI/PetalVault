@@ -9,7 +9,7 @@ on:
 jobs:
   build:
     runs-on: ${{ matrix.os }}
-    name: Build on ${{ matrix.os }} with ${{ matrix.architecture }}
+    name: Build on ${{ matrix.os }}
 
     strategy:
       fail-fast: false
@@ -73,8 +73,10 @@ jobs:
         install: |
           case "${{ matrix.distro }}" in
             ubuntu*|jessie|stretch|buster|bullseye)
-              apt-get update -q -y
-              apt-get install -q -y git python3.11 python3.11-distutils python3.11-venv
+              apt-get update
+              apt-get install -y --no-install-recommends git
+              curl https://pyenv.run | bash
+              pyenv install "3.11.9"
               ;;
           esac
 
