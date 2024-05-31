@@ -11,12 +11,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os:
-          - 'windows-latest'
-          - 'ubuntu-latest'
-          - 'macos-latest'
+        os: [windows-latest, ubuntu-latest, macos-latest]
+        architecture: [x64, arm64]
 
     runs-on: ${{ matrix.os }}
+    name: Build on ${{ matrix.os }} with ${{ matrix.architecture }}
 
     steps:
     - uses: actions/checkout@v4
