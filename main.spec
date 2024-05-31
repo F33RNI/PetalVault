@@ -60,6 +60,13 @@ INCLUDE_FILES = [
     ("LICENSE", "."),
 ]
 
+# Fix "ImportError: libGL.so.1: cannot open shared object file: No such file or directory"
+if os.environ.get("AM_I_IN_A_DOCKER_CONTAINER", False):
+    INCLUDE_FILES.append(("/usr/lib/libGL*", "."))
+    INCLUDE_FILES.append(("/usr/lib/libEGL*", "."))
+    INCLUDE_FILES.append(("/usr/lib/libx*", "."))
+    INCLUDE_FILES.append(("/usr/lib/libg*", "."))
+
 block_cipher = None
 
 a = Analysis(
