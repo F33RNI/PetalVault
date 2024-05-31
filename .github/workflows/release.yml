@@ -49,6 +49,10 @@ jobs:
     steps:
       - name: Check out code
         uses: actions/checkout@v4
+      - name: Setup Python for parsing PetalVault version
+        uses: actions/setup-python@v5
+      - name: Parse PetalVault version
+        run: echo "petalvault_version=`python -c 'from _version import __version__; print(__version__)'`" >> "$GITHUB_ENV"
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx
