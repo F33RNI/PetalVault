@@ -7,7 +7,7 @@
 FROM python:3.11-slim AS build
 RUN --mount=type=cache,target=/root/.cache/pip \
     apt-get update && \
-    apt-get install -y git binutils build-essential && \
+    apt-get install -y git binutils build-essential qt6-base && \
     pip install pyinstaller
 
 # Install dependencies
