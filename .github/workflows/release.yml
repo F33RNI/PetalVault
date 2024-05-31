@@ -63,7 +63,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
       - run: mkdir dist
-      - run: cp docker-output/app/petalvault dist/petalvault-${{ matrix.platform.os}}-${{ matrix.platform.arch }}
+      - run: cp docker-output/app/petalvault dist/petalvault-${{ env.petalvault_version }}-${{ matrix.platform.os}}-${{ matrix.platform.arch }}
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
