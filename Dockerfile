@@ -11,7 +11,7 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     pip install pyinstaller
 
 # Fix QT6
-RUN qtchooser --install qt6 $(which qmake6)
+RUN qtchooser --install qt6 $(which qmake6) && export QT_SELECT=qt6 && ln -sfT $(which qmake6) "/usr/bin/qmake"
 
 # Verify qmake installation
 RUN qmake --version
