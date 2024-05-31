@@ -74,7 +74,7 @@ jobs:
           case "${{ matrix.distro }}" in
             ubuntu*|jessie|stretch|buster|bullseye)
               apt-get update
-              apt-get install -y --no-install-recommends git
+              apt-get install -y --no-install-recommends git curl
               curl https://pyenv.run | bash
               pyenv install "3.11.9"
               ;;
@@ -99,4 +99,4 @@ jobs:
       uses: softprops/action-gh-release@v1
       with:
         files: |
-          dist/*
+          "${PWD}/artifacts"
