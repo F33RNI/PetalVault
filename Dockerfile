@@ -19,7 +19,7 @@ RUN qmake --version
 # Install dependencies
 RUN --mount=type=cache,target=/root/.cache/pip \
     --mount=type=bind,source=requirements.txt,target=requirements.txt \
-    cat requirements.txt | grep -Ewv 'PyQt6*' | pip install -r /dev/stdin
+    pip install -r requirements.txt
 
 # Build
 WORKDIR /src
