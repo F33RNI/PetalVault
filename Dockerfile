@@ -15,13 +15,15 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     --mount=type=bind,source=requirements.txt,target=requirements.txt \
     pip install -r requirements.txt
 
+# Copy the rest of the application files
+COPY . .
+
 # Build
 WORKDIR /src
 ENV PYINSTALLER_CONFIG_DIR /src
 RUN mkdir -p $PYINSTALLER_CONFIG_DIR/dist $PYINSTALLER_CONFIG_DIR/build
 ENV AM_I_IN_A_DOCKER_CONTAINER Yes
-RUN --mount=type=bind,source=. \
-    pyinstaller main.spec
+RUN source=. pyinstaller main.spec
 
 # Build application image
 FROM alpine
