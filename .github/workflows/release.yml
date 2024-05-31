@@ -7,7 +7,7 @@ on:
       - 'edited'
 
 jobs:
-  build:
+  build-main:
     runs-on: ${{ matrix.os }}
     name: Build on ${{ matrix.os }}
 
@@ -33,3 +33,39 @@ jobs:
       with:
         files: |
           dist/*
+
+  build-from-docker:
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - os: linux
+            arch: amd64
+          - os: linux
+            arch: arm64
+
+    runs-on: 'ubuntu-latest'
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build Docker Image
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: ${{ matrix.platform.os }}/${{ matrix.platform.arch }}
+          outputs: docker-output
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - run: mkdir dist
+      - run: cp docker-output/app/petalvault dist/petalvault-${{ matrix.platform.os}}-${{ matrix.platform.arch }}
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            dist/*
