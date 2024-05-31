@@ -8,6 +8,39 @@ on:
 
 jobs:
   build:
+    runs-on: ${{ matrix.os }}
+    name: Build on ${{ matrix.os }} with ${{ matrix.architecture }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+          - os: ubuntu-latest
+          - os: ubuntu-latest
+            architecture: arm64
+          - os: macos-latest
+          - os: macos-latest
+            architecture: arm64
+
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    - run: pip install -r requirements.txt
+    - run: pip install pyinstaller
+    - run: pyinstaller main.spec
+    - name: Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          dist/*
+
+  build_ubuntu_arm:
+    runs-on: ubuntu-latest
+    name: Build on ${{ matrix.distro }} ${{ matrix.arch }}
+
     strategy:
       fail-fast: false
       matrix:
@@ -16,14 +49,6 @@ jobs:
             distro: ubuntu_latest
           - arch: armv7
             distro: ubuntu_latest
-          - os: windows-latest
-          - os: ubuntu-latest
-          - os: macos-latest
-          - os: macos-latest
-            architecture: arm64
-
-    runs-on: ${{ matrix.os }}
-    name: Build on ${{ matrix.distro }} ${{ matrix.arch }}
 
     steps:
     - uses: actions/checkout@v4
