@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build_ubuntu:
+  test-ubuntu:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
@@ -25,7 +25,7 @@ jobs:
     - run: mv `ls -d dist/petalvault*` dist/petalvault
     - run: dist/petalvault --version
 
-  build_docker:
+  test-docker:
     strategy:
       matrix:
         platform:
