@@ -24,11 +24,12 @@ import os
 import secrets
 import string
 import webbrowser
-from typing import Dict, Tuple
+from typing import Dict, List, Tuple
 
 import qdarktheme
 from Crypto.Cipher import AES
 from Crypto.Util import Padding
+from packaging import version
 from PyQt6 import QtCore, QtGui, uic
 from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import (
@@ -47,7 +48,14 @@ from _version import __version__
 from clear_layout import clear_layout
 from combo_box_dialog import combo_box_dialog
 from config_manager import ConfigManager
-from encrypt_decrypt import decrypt_entry, encrypt_entry
+from encrypt_decrypt import (
+    decrypt_entry,
+    decrypt_mnemonic,
+    decrypt_mnemonic_old,
+    encrypt_entry,
+    encrypt_mnemonic,
+    entropy_to_master_key,
+)
 from get_resource_path import get_resource_path
 from mnemonic_dialog import MnemonicDialog
 from scan_dialog import ScanDialog
@@ -74,7 +82,10 @@ ICON_DELETE = get_resource_path(os.path.join("icons", "delete.png"))
 
 # Generated password parameters
 PASSWORD_DATASET = string.ascii_letters + string.digits + string.punctuation
-PASSWORD_LENGTH = 12
+PASSWORD_LENGTH = 16
+
+# CPU/Memory cost parameter for master key derivation
+MASTER_KEY_COST = 2**20
 
 
 class GUIMainWindow(QMainWindow):
@@ -288,18 +299,25 @@ class GUIMainWindow(QMainWindow):
         if not self._vault:
             return
 
-        actions = self.scan_dialog.exec(
+        actions_and_salt = self.scan_dialog.exec(
             self.translator.get("qr_scanner_actions_title"),
             self.translator.get("qr_scanner_actions_description_import_sync"),
             "actions",
         )
-        if actions is None:
+        if actions_and_salt is None:
             logging.debug("No actions provided")
             return
 
+        actions, sync_salt = actions_and_salt
+
+        # Generate key from entropy and salt or use entropy (for old versions)
+        sync_key = self._vault["entropy"]
+        if sync_salt is not None:
+            sync_key, _ = entropy_to_master_key(sync_key, sync_salt)
+
         # pylint: disable=not-an-iterable
         for action in actions:
-            if not self._vault_action(action, save=False, rerender=False):
+            if not self._vault_action(action, sync_key=sync_key, save=False, rerender=False):
                 return False
         # pylint: enable=not-an-iterable
 
@@ -396,6 +414,11 @@ class GUIMainWindow(QMainWindow):
                 with open(path, "r", encoding="utf-8") as file:
                     self._vault = json.loads(file.read())
 
+                # Extract version of the vault
+                vault_version = version.parse(self._vault["version"])
+                if vault_version > version.parse(__version__):
+                    raise Exception("Vault file is saved in a newer version. Please update PetalVault")
+
                 # Ask for master password instead of mnemonic
                 master_password = None
                 if self._vault.get("mnemonic_encrypted"):
@@ -420,20 +443,37 @@ class GUIMainWindow(QMainWindow):
 
                 # Try to build entropy
                 try:
-                    # Use master password to decrypt mnemonic (POSSIBLY NOT SAFE)
+                    # Use master password to decrypt mnemonic
                     if master_password:
-                        master_password_hash = hashlib.sha256(
-                            hashlib.sha256(master_password.encode("utf-8")).digest()
-                        ).digest()
-                        mnemo_key = master_password_hash[-16:]
-
-                        # Decrypt mnemonic
-                        iv = base64.b64decode(self._vault["mnemonic_encrypted_iv"].encode("utf-8"))
-                        cipher = AES.new(mnemo_key, AES.MODE_CBC, iv=iv)
                         mnemonic_encrypted = base64.b64decode(self._vault["mnemonic_encrypted"].encode("utf-8"))
-                        mnemonic_decrypted = cipher.decrypt(mnemonic_encrypted)
-                        mnemonic_unpadded = Padding.unpad(mnemonic_decrypted, AES.block_size).decode("utf-8")
-                        mnemonic = mnemonic_unpadded.split(" ")
+
+                        # Old PetalVault
+                        if vault_version.major < 2:
+                            # Decrypt
+                            iv = base64.b64decode(self._vault["mnemonic_encrypted_iv"].encode("utf-8"))
+                            mnemonic = decrypt_mnemonic_old(mnemonic_encrypted, master_password, iv)
+
+                            # Remove old keys
+                            del self._vault["mnemonic_encrypted"]
+                            del self._vault["mnemonic_encrypted_iv"]
+
+                            # Encrypt in new version
+                            mnemonic_encrypted, mnemonic_salt_1, mnemonic_salt_2 = encrypt_mnemonic(
+                                mnemonic, master_password
+                            )
+
+                            # Save as base64
+                            self._vault["mnemonic_encrypted"] = base64.b64encode(mnemonic_encrypted).decode("utf-8")
+                            self._vault["mnemonic_salt_1"] = base64.b64encode(mnemonic_salt_1).decode("utf-8")
+                            self._vault["mnemonic_salt_2"] = base64.b64encode(mnemonic_salt_2).decode("utf-8")
+
+                        # New (with key derivation)
+                        else:
+                            mnemonic_salt_1 = base64.b64decode(self._vault["mnemonic_salt_1"].encode("utf-8"))
+                            mnemonic_salt_2 = base64.b64decode(self._vault["mnemonic_salt_2"].encode("utf-8"))
+                            mnemonic = decrypt_mnemonic(
+                                mnemonic_encrypted, master_password, mnemonic_salt_1, mnemonic_salt_2
+                            )
 
                     # Convert to entropy
                     entropy = self.mnemonic_dialog.mnemo.to_entropy(mnemonic)
@@ -444,29 +484,40 @@ class GUIMainWindow(QMainWindow):
                     self._close_vault()
                     return
 
-                # Save mnemonic and
+                # Temporary save mnemonic and entropy
                 self._vault["mnemonic"] = mnemonic
                 self._vault["entropy"] = entropy
 
                 # Decrypt entries
-                entries_decrypted = []
-                entries = self._vault.get("entries", [])
-                for entry in entries:
-                    # Extract data
-                    unique_id = entry.get("id")
-                    encrypted = entry.get("enc")
-                    iv = entry.get("iv")
-                    if not unique_id or not encrypted or not iv:
-                        continue
+                if (vault_version.major >= 2 and "master_salt" in self._vault) or vault_version.major < 2:
+                    # Load current master key (for decrypting entries)
+                    if vault_version.major >= 2:
+                        master_salt = base64.b64decode(self._vault["master_salt"].encode("utf-8"))
+                        master_key, _ = entropy_to_master_key(entropy, master_salt)
 
-                    entry_decrypted = decrypt_entry(entry, self._vault["entropy"])
-                    if not entry_decrypted:
-                        raise Exception(f"Unable to decrypt {unique_id} entry")
+                    # Use entropy as master key in older versions
+                    else:
+                        master_key = entropy
 
-                    # Add
-                    entries_decrypted.append(entry_decrypted)
+                    # Decrypt entries
+                    entries_decrypted = []
+                    entries = self._vault.get("entries", [])
+                    logging.debug(f"Decrypting {len(entries)} entries")
+                    for entry in entries:
+                        # Extract data
+                        encrypted = entry.get("enc")
+                        iv = entry.get("iv")
+                        if not encrypted or not iv:
+                            continue
 
-                self._vault["entries_decrypted"] = entries_decrypted
+                        entry_decrypted = decrypt_entry(entry, master_key)
+                        if not entry_decrypted:
+                            raise Exception("Unable to decrypt entry")
+
+                        # Add
+                        entries_decrypted.append(entry_decrypted)
+
+                    self._vault["entries_decrypted"] = entries_decrypted
 
             except Exception as e:
                 logging.error("Error opening vault", exc_info=e)
@@ -479,6 +530,17 @@ class GUIMainWindow(QMainWindow):
                 return
 
         self._vault["path"] = path
+
+        # Delete all encrypted entries (because master key will be updated)
+        if "entries" in self._vault and len(self._vault["entries"]) != 0:
+            del self._vault["entries"]
+            gc.collect()
+            self._vault["entries"] = []
+
+        # Rotate master key
+        master_key, master_salt = entropy_to_master_key(self._vault["entropy"])
+        self._vault["master_key"] = master_key
+        self._vault["master_salt"] = base64.b64encode(master_salt).decode("utf-8")
 
         # Move to the top and reload recent vaults
         index = self._vaults.index((path, self._vault["name"]))
@@ -538,6 +600,9 @@ class GUIMainWindow(QMainWindow):
 
         self._vault["mnemonic"] = mnemonic
 
+        # Temporally extract entropy (for master key derivation)
+        self._vault["entropy"] = self.mnemonic_dialog.mnemo.to_entropy(mnemonic)
+
         # Ask if user wants to use master password to encrypt mnemonic phrase
         confirm = QMessageBox().question(
             self,
@@ -567,21 +632,15 @@ class GUIMainWindow(QMainWindow):
 
             master_password = master_password[0]
 
-        # Temporally save entropy (actual master key)
-        self._vault["entropy"] = self.mnemonic_dialog.mnemo.to_entropy(mnemonic)
-
-        # Use master password to encrypt mnemonic (POSSIBLY NOT SAFE)
+        # Use master password to encrypt mnemonic
         if master_password:
-            master_password_hash = hashlib.sha256(hashlib.sha256(master_password.encode("utf-8")).digest()).digest()
-            mnemo_key = master_password_hash[-16:]
+            # Encrypt
+            mnemonic_encrypted, mnemonic_salt_1, mnemonic_salt_2 = encrypt_mnemonic(mnemonic, master_password)
 
-            # Encrypt and save mnemonic (POSSIBLY NOT SAFE)
-            iv = secrets.token_bytes(16)
-            cipher = AES.new(mnemo_key, AES.MODE_CBC, iv=iv)
-            mnemonic_padded = Padding.pad(" ".join(mnemonic).encode("utf-8"), AES.block_size)
-            mnemonic_encrypted = cipher.encrypt(mnemonic_padded)
+            # Save as base64
             self._vault["mnemonic_encrypted"] = base64.b64encode(mnemonic_encrypted).decode("utf-8")
-            self._vault["mnemonic_encrypted_iv"] = base64.b64encode(iv).decode("utf-8")
+            self._vault["mnemonic_salt_1"] = base64.b64encode(mnemonic_salt_1).decode("utf-8")
+            self._vault["mnemonic_salt_2"] = base64.b64encode(mnemonic_salt_2).decode("utf-8")
 
         # Ask for data (import)
         if from_device:
@@ -642,15 +701,16 @@ class GUIMainWindow(QMainWindow):
             # Make copy
             vault_ = self._vault.copy()
 
-            # Delete secret fields
-            if "mnemonic" in vault_:
-                del vault_["mnemonic"]
-            if "entropy" in vault_:
-                del vault_["entropy"]
-            if "path" in vault_:
-                del vault_["path"]
-            if "entries_decrypted" in vault_:
-                del vault_["entries_decrypted"]
+            # Encrypt entries
+            entries_encrypted = []
+            for entry in vault_.get("entries_decrypted", []):
+                entries_encrypted.append(encrypt_entry(entry, vault_["master_key"]))
+            vault_["entries"] = entries_encrypted
+
+            # Delete secrets
+            for secret_ in ["mnemonic", "entropy", "path", "entries_decrypted", "master_key"]:
+                if secret_ in vault_:
+                    del vault_[secret_]
 
             # Add version info
             vault_["version"] = __version__
@@ -672,11 +732,14 @@ class GUIMainWindow(QMainWindow):
 
         return None
 
-    def _vault_action(self, action: Dict, save: bool = True, rerender: bool = True) -> bool:
+    def _vault_action(
+        self, action: Dict, sync_key: bytes or None = None, save: bool = True, rerender: bool = True
+    ) -> bool:
         """Applies action to the current vault
 
         Args:
             action (Dict): action as dictionary (encrypted or not)
+            sync_key (bytes or None, optional): master key (32 bytes) from sync / import or entropy (for v < 2.0.0)
             save (bool, optional): save vault after. Defaults to True
             rerender (bool, optional): rerender vault after. Defaults to True
 
@@ -693,19 +756,21 @@ class GUIMainWindow(QMainWindow):
         try:
             # Add or sync action
             if act == "new" or act == "add" or act == "sync":
-                # Generate unique ID
-                if "id" not in action:
-                    action["id"] = secrets.token_urlsafe(8)
-
                 # Decrypt action data if needed
                 if "enc" in action and "iv" in action:
-                    entry_decrypted = decrypt_entry(action, self._vault["entropy"])
+                    if sync_key is None:
+                        raise Exception("No sync_key provided")
+                    entry_decrypted = decrypt_entry(action, sync_key)
                 else:
                     entry_decrypted = action.copy()
                     del entry_decrypted["act"]
 
+                # Generate unique ID if needed
+                if "id" not in entry_decrypted:
+                    entry_decrypted["id"] = secrets.token_urlsafe(8)
+
                 # Try to find decrypted entry (to update it and grab other keys for encryption)
-                index_decrypted, _ = self._id_to_entry(action["id"], "entries_decrypted")
+                index_decrypted, _ = self._id_to_entry(entry_decrypted["id"])
 
                 # Create new element
                 if index_decrypted == -1:
@@ -719,31 +784,6 @@ class GUIMainWindow(QMainWindow):
                     for key in ["site", "user", "pass", "notes"]:
                         if key in entry_decrypted:
                             self._vault["entries_decrypted"][index_decrypted][key] = entry_decrypted[key]
-
-                # Keep existing keys
-                entry_to_encrypt = entry_decrypted.copy()
-                for key in ["site", "user", "pass", "notes"]:
-                    if key in self._vault["entries_decrypted"][index_decrypted]:
-                        entry_to_encrypt[key] = self._vault["entries_decrypted"][index_decrypted][key]
-
-                # Encrypt again (to rotate IV)
-                entry_encrypted = encrypt_entry(entry_to_encrypt, self._vault["entropy"])
-                if not entry_encrypted:
-                    return False
-
-                # Try to find encrypted entry (to update it)
-                index_encrypted, _ = self._id_to_entry(action["id"])
-
-                # Create new element
-                if index_encrypted == -1:
-                    if "entries" not in self._vault:
-                        self._vault["entries"] = []
-                    self._vault["entries"].insert(0, entry_encrypted)
-
-                # Update entry
-                else:
-                    self._vault["entries"][index_encrypted]["enc"] = entry_encrypted["enc"]
-                    self._vault["entries"][index_encrypted]["iv"] = entry_encrypted["iv"]
 
             # Delete entry action
             elif act == "delete":
@@ -900,114 +940,157 @@ class GUIMainWindow(QMainWindow):
         Args:
             clean_device (bool, optional): True to just export without selecting a new device. Defaults to True
         """
-        if not self._vault or not self._vault.get("entries"):
+        if not self._vault or not self._vault.get("entries_decrypted"):
             return
 
         device_entries = []
+        device_salt = None
         device_name = None
 
-        # Ask user for existing devices or create a new one
-        if not clean_device:
-            devices = list(self._vault.get("devices", {}).keys())
-            if len(devices) != 0:
-                devices.append(self.translator.get("new_device"))
-                device_index = combo_box_dialog(self, self.translator.get("select_device"), devices)
-                if device_index is None:
-                    logging.debug("No device provided")
-                    return
-                if device_index < len(devices) - 1:
-                    device_name = devices[device_index]
-                    logging.debug(f"Selected device: {device_name}")
-                    device_entries = self._vault.get("devices", {})[device_name]
+        try:
+            # Ask user for existing devices or create a new one
+            if not clean_device:
+                devices = list(self._vault.get("devices", {}).keys())
+                if len(devices) != 0:
+                    devices.append(self.translator.get("new_device"))
+                    device_index = combo_box_dialog(self, self.translator.get("select_device"), devices)
+                    if device_index is None:
+                        logging.debug("No device provided")
+                        return
+                    if device_index < len(devices) - 1:
+                        device_name = devices[device_index]
+                        logging.debug(f"Selected device: {device_name}")
+                        device_entries_and_salt = self._vault.get("devices", {})[device_name]
 
-            # Create a new device
-            if not device_name:
-                device_name_ = QInputDialog().getText(
-                    self,
-                    self.translator.get("new_device_title"),
-                    self.translator.get("new_device_label"),
-                )
-                if not device_name_ or not device_name_[0].strip():
-                    logging.debug("No device name provided")
-                    return
+                        # New format (v >= 2.0.0)
+                        if isinstance(device_entries_and_salt, Dict):
+                            device_entries = device_entries_and_salt.get("entries", [])
+                            device_salt = device_entries_and_salt["salt"]
+                            device_salt = base64.b64decode(device_salt.encode("utf-8"))
 
-                device_name = device_name_[0].strip()
+                        # Old format (v < 2.0.0)
+                        elif isinstance(device_entries_and_salt, List):
+                            device_entries = device_entries_and_salt
 
-                # Show mnemonic
+                # Create a new device
+                if not device_name:
+                    device_name_ = QInputDialog().getText(
+                        self,
+                        self.translator.get("new_device_title"),
+                        self.translator.get("new_device_label"),
+                    )
+                    if not device_name_ or not device_name_[0].strip():
+                        logging.debug("No device name provided")
+                        return
+
+                    device_name = device_name_[0].strip()
+
+                    # Show mnemonic
+                    self._show_mnemonic()
+
+                logging.debug(f"Current number of entries on {device_name}: {len(device_entries)}")
+
+            # Pure export -> show mnemonic
+            else:
                 self._show_mnemonic()
 
-            logging.debug(f"Current number of entries on {device_name}: {len(device_entries)}")
+            # Build device master key
+            device_key = self._vault["entropy"]
+            if device_salt is not None:
+                device_key, _ = entropy_to_master_key(device_key, device_salt)
 
-        # Pure export -> show mnemonic
-        else:
-            self._show_mnemonic()
+            # Decrypt device entries and build list of IDs
+            device_entries_decrypted = []
+            device_entry_ids = []
+            for device_entry in device_entries:
+                device_entry_decrypted = decrypt_entry(device_entry, device_key)
+                device_entry_ids.append(device_entry_decrypted["id"])
+                device_entries_decrypted.append(device_entry_decrypted)
 
-        # Build lists of unique IDs
-        device_entry_ids = []
-        for device_entry in device_entries:
-            device_entry_ids.append(device_entry["id"])
-        entry_ids = []
-        for entry in self._vault.get("entries", {}):
-            entry_ids.append(entry["id"])
+            # Build lists of IDs of current vault entries
+            entry_ids = []
+            for entry in self._vault.get("entries_decrypted", []):
+                entry_ids.append(entry["id"])
 
-        # Build list of sync actions starting from delete entries
-        actions = []
-        for device_entry_id in device_entry_ids:
-            if device_entry_id not in entry_ids:
-                actions.append({"act": "delete", "id": device_entry_id})
+            # Build list of sync actions starting from delete entries
+            actions = []
+            for device_entry_id in device_entry_ids:
+                if device_entry_id not in entry_ids:
+                    actions.append({"act": "delete", "id": device_entry_id})
 
-        # Add non-existing entries actions and sync actions from bottom to top
-        entry_ids.reverse()
-        for entry_id in entry_ids:
-            _, entry = self._id_to_entry(entry_id)
-            _, device_entry = self._id_to_entry(entry_id, entries=device_entries)
-            if device_entry and device_entry == entry:
-                continue
+            # Generate master sync key
+            sync_key, sync_salt = entropy_to_master_key(self._vault["entropy"])
 
-            action = {"act": "add" if entry_id not in device_entry_ids else "sync", "id": entry_id}
+            # Add non-existing entries actions and sync actions from bottom to top
+            entry_ids.reverse()
+            for entry_id in entry_ids:
+                _, entry_decrypted = self._id_to_entry(entry_id)
+                _, device_entry_decrypted = self._id_to_entry(entry_id, entries=device_entries_decrypted)
+                if device_entry_decrypted and device_entry_decrypted == entry_decrypted:
+                    continue
 
-            for key, value in entry.items():
-                action[key] = value
-            actions.append(action)
+                # Encrypt entry
+                entry_encrypted = encrypt_entry(entry_decrypted, sync_key)
 
-        logging.debug(f"Actions to execute: {actions}")
+                # "add" action in case of new entry, "sync" if exists
+                entry_encrypted["act"] = "add" if entry_id not in device_entry_ids else "sync"
 
-        # Check if we have anything to sync
-        if len(actions) == 0:
+                actions.append(entry_encrypted)
+
+            logging.debug(f"Actions to execute: {actions}, salt: {sync_salt}")
+
+            # Check if we have anything to sync
+            if len(actions) == 0:
+                if device_name:
+                    text = self.translator.get("nothing_to_sync").format(device_name=device_name)
+                else:
+                    text = self.translator.get("nothing_to_export")
+                QMessageBox().information(self, text, text)
+                return
+
+            # Show QR codes (blocking)
+            self.view_dialog.exec(
+                self.translator.get("qr_viewer_actions_title"),
+                self.translator.get("qr_viewer_actions_description").format(
+                    device_name=device_name if device_name else ""
+                ),
+                actions=actions,
+                sync_salt=sync_salt,
+            )
+
+            # Save
             if device_name:
-                text = self.translator.get("nothing_to_sync").format(device_name=device_name)
+                if "devices" not in self._vault:
+                    self._vault["devices"] = {}
+                if device_name not in self._vault["devices"] or isinstance(self._vault["devices"][device_name], List):
+                    self._vault["devices"][device_name] = {}
+                if "entries" not in self._vault["devices"][device_name]:
+                    self._vault["devices"][device_name]["entries"] = []
+
+                # Clear device entries
+                self._vault["devices"][device_name]["entries"].clear()
+
+                # Encrypt with sync key
+                for entry in self._vault.get("entries_decrypted", []):
+                    self._vault["devices"][device_name]["entries"].append(encrypt_entry(entry, sync_key))
+
+                # Save sync salt
+                self._vault["devices"][device_name]["salt"] = base64.b64encode(sync_salt).decode("utf-8")
+
+                # Save vault
+                self._vault_save(filepath=self._vault.get("path"))
+
+            # Done
+            if device_name:
+                text = self.translator.get("synced_with").format(device_name=device_name)
             else:
-                text = self.translator.get("nothing_to_export")
+                text = self.translator.get("exported")
             QMessageBox().information(self, text, text)
-            return
 
-        # Show QR codes (blocking)
-        self.view_dialog.exec(
-            self.translator.get("qr_viewer_actions_title"),
-            self.translator.get("qr_viewer_actions_description").format(
-                device_name=device_name if device_name else ""
-            ),
-            actions=actions,
-        )
-
-        # Save
-        if device_name:
-            if "devices" not in self._vault:
-                self._vault["devices"] = {}
-            if device_name not in self._vault["devices"]:
-                self._vault["devices"][device_name] = []
-
-            self._vault["devices"][device_name].clear()
-            for entry in self._vault.get("entries", {}):
-                self._vault["devices"][device_name].append(entry.copy())
-            self._vault_save(filepath=self._vault.get("path"))
-
-        # Done
-        if device_name:
-            text = self.translator.get("synced_with").format(device_name=device_name)
-        else:
-            text = self.translator.get("exported")
-        QMessageBox().information(self, text, text)
+        # Error
+        except Exception as e:
+            logging.error("Sync to / export error", exc_info=e)
+            self._error_wrapper(self.translator.get("error_sync_to"), exception_text=str(e))
 
         # Refresh
         self._update_devices()
@@ -1028,7 +1111,7 @@ class GUIMainWindow(QMainWindow):
 
         try:
             # Try to find decrypted entry
-            index_decrypted, entry_decrypted = self._id_to_entry(unique_id, "entries_decrypted")
+            index_decrypted, entry_decrypted = self._id_to_entry(unique_id)
             if index_decrypted == -1 or not entry_decrypted:
                 return
 
@@ -1051,11 +1134,6 @@ class GUIMainWindow(QMainWindow):
 
             # Delete from decrypted
             del self._vault["entries_decrypted"][index_decrypted]
-
-            # Delete from encrypted
-            index_encrypted, _ = self._id_to_entry(unique_id)
-            if index_encrypted != -1:
-                del self._vault["entries"][index_encrypted]
 
             # Save vault
             if save:
@@ -1138,21 +1216,18 @@ class GUIMainWindow(QMainWindow):
             logging.error("Error deleting vault", exc_info=e)
             self._error_wrapper(self.translator.get("error_delete"), description=str(e))
 
-    def _id_to_entry(
-        self, unique_id: str, entries_key: str = "entries", entries: Dict or None = None
-    ) -> Tuple[int, Dict or None]:
-        """Finds entry and it's current index by unique_id
+    def _id_to_entry(self, unique_id: str, entries: Dict or None = None) -> Tuple[int, Dict or None]:
+        """Finds entry in "entries_decrypted" or entries and it's current index by unique_id
 
         Args:
             unique_id (str): entry ID
-            entries_key (str, optional): "entries" or "entries_decrypted". Defaults to "entries"
-            entries (Dict or None, optional): entries to use instead of entries_key. Defaults to None
+            entries (Dict or None, optional): entries to use instead of "entries_decrypted". Defaults to None
 
         Returns:
             Tuple[int, Dict or None]: (index, entry as dictionary) or (-1, None) if not found
         """
         if entries is None:
-            entries = self._vault.get(entries_key, [])
+            entries = self._vault.get("entries_decrypted", [])
         return next(((i, item) for (i, item) in enumerate(entries) if item["id"] == unique_id), (-1, None))
 
     def _show_hide(self, show: bool) -> None:

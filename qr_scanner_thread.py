@@ -14,6 +14,7 @@ You should have received a copy of the GNU General Public License along with thi
 If not, see <http://www.gnu.org/licenses/>.
 """
 
+import base64
 import json
 import logging
 import threading
@@ -48,9 +49,11 @@ class QRScannerThread(threading.Thread, QtCore.QObject):
 
         self._camera_index = camera_index
         self._expected_data = expected_data
+        self._scanned_idxs = []
 
         # Dialog result
         self.actions = []
+        self.sync_salt = None
         self.mnemonic = None
         self.exception = None
 
@@ -71,6 +74,7 @@ class QRScannerThread(threading.Thread, QtCore.QObject):
         # Open camera and try to read the first frame
         logging.debug(f"Opening camera: {self._camera_index}")
         self.exception = None
+        self._scanned_idxs.clear()
         try:
             capture = cv2.VideoCapture(self._camera_index)
             ret, _ = capture.read()
@@ -107,14 +111,28 @@ class QRScannerThread(threading.Thread, QtCore.QObject):
 
                             logging.debug(f"Received part {part_idx + 1} / {parts_total}")
 
+                            # Check for salt
+                            if "salt" in data_dict:
+                                self.sync_salt = base64.b64decode(data_dict["salt"].encode("utf-8"))
+                                if len(self.sync_salt) != 32:
+                                    raise Exception("Sync salt is not 32 bytes long")
+                                logging.debug(f"Received salt: {self.sync_salt}")
+
                             # Add to the final list
                             for action in data_dict.get("acts", []):
                                 if action not in self.actions:
                                     self.actions.append(action)
 
-                            # Final part
-                            if part_idx == parts_total - 1:
-                                logging.debug("Received final part")
+                            # Build flags
+                            if len(self._scanned_idxs) == 0:
+                                self._scanned_idxs = [False for _ in range(parts_total)]
+
+                            # Set received part
+                            self._scanned_idxs[part_idx] = True
+
+                            # All parts
+                            if all(scanned_idx == True for scanned_idx in self._scanned_idxs):
+                                logging.debug("Received all parts")
                                 self._exit_flag = True
 
                             # Show progress
