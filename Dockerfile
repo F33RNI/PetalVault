@@ -7,16 +7,19 @@
 FROM python:3.12-slim AS build
 RUN --mount=type=cache,target=/root/.cache/pip \
     apt-get update && \
-    apt-get install -y git binutils build-essential qt6-base-dev qt6-tools-dev pyqt6-dev-tools python3-pyqt6* && \
+    apt-get install -y git binutils build-essential qt6-base-dev qt6-tools-dev pyqt6-dev-tools python3-pyqt6* qtchooser && \
     pip install pyinstaller
 
+# Fix QT6
+RUN qtchooser --install qt6 $(which qmake6)
+
 # Verify qmake installation
-RUN ln -sf $(which qmake6) $(which qmake) && qmake --version
+RUN qmake --version
 
 # Install dependencies
 RUN --mount=type=cache,target=/root/.cache/pip \
     --mount=type=bind,source=requirements.txt,target=requirements.txt \
-    ln -sf $(which qmake6) $(which qmake) && pip install -r requirements.txt
+    pip install -r requirements.txt
 
 # Build
 WORKDIR /src
