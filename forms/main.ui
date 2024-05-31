@@ -329,7 +329,6 @@
      </property>
      <addaction name="act_light"/>
      <addaction name="act_dark"/>
-     <addaction name="act_auto"/>
     </widget>
     <widget class="QMenu" name="menu_delete_device">
      <property name="title">
@@ -406,11 +405,6 @@
   <action name="act_dark">
    <property name="text">
     <string>Dark</string>
-   </property>
-  </action>
-  <action name="act_auto">
-   <property name="text">
-    <string>Auto</string>
    </property>
   </action>
   <action name="act_rename">

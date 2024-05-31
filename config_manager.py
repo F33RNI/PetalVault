@@ -70,6 +70,9 @@ class ConfigManager:
         """
         # Retrieve from config
         if key in self._config:
+            # Disable auto theme to prevent "FileNotFoundError: [Errno 2] No such file or directory: 'gsettings'"
+            if key == "theme" and self._config[key] == "auto":
+                return "light"
             return self._config[key]
 
         # Use default value
