@@ -8,10 +8,13 @@ on:
 
 jobs:
   build:
+    runs-on: ${{ matrix.os }}
+    name: Build on ${{ matrix.os }}
+
     strategy:
       fail-fast: false
       matrix:
-        platform:
+        include:
           - os: windows-latest
           - os: ubuntu-latest
           - os: macos-latest
@@ -19,7 +22,29 @@ jobs:
           - os: linux
             arch: arm64
 
-    runs-on: ${{ matrix.os }}
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+    - run: pip install --upgrade -r requirements.txt
+    - run: pip install pyinstaller
+    - run: pyinstaller main.spec
+    - name: Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          dist/*
+
+  build-linux:
+    runs-on: 'ubuntu-latest'
+
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - os: linux
+            arch: arm64
 
     steps:
     - uses: actions/checkout@v4
