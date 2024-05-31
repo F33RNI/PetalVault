@@ -4,22 +4,65 @@
 # Use buildkit syntax labs
 # https://github.com/moby/buildkit
 
+# I COULD NOT CONFIGURE THIS TO PROPERLY BUILD ARM64 AND AMD64 (so it's just a dummy file for now)
+
 FROM python:3.12-slim AS build
+
+# Install build dependencies
 RUN --mount=type=cache,target=/root/.cache/pip \
-    apt-get update && \
-    apt-get install -y git binutils build-essential qt6-base-dev qt6-tools-dev pyqt6-dev-tools python3-pyqt6* qtchooser ffmpeg libsm6 libxext6 libgl1 libgl1-mesa-dev && \
-    pip install pyinstaller
+    apt-get update && apt-get install -y \
+    git \
+    binutils \
+    build-essential \
+    python3 \
+    python3-venv \
+    python3-pip \
+    ffmpeg \
+    dconf-editor \
+    libglib2.0-bin \
+    libsm6 \
+    libxext6 \
+    libegl1 \
+    libgl1-mesa-dri \
+    libxcb1 \
+    libxcb-cursor-dev \
+    libgl1-mesa-dev \
+    libxkbcommon-x11-0 \
+    libxcb-icccm4 \
+    libxcb-image0 \
+    libxcb-keysyms1 \
+    libxcb-randr0 \
+    libxcb-render-util0 \
+    libxcb-xinerama0 \
+    libxcb-xinput0 \
+    libxcb-xfixes0 \
+    libxcb-shape0 \
+    libxcb-render0 \
+    libxcb-glx0 \
+    libxi6 \
+    libxkbfile1 \
+    libxcb-cursor0 \
+    libgtk-3-0 \
+    libatk1.0-0 \
+    libglu1 \
+    libglu1-mesa \
+    freeglut3-dev \
+    libglut3.* \
+    && pip install pyinstaller
 
-# Fix QT6
-RUN qtchooser --install qt6 $(which qmake6) && export QT_SELECT=qt6 && ln -sfT $(which qmake6) "/usr/bin/qmake"
+# Verify gsettings installation
+RUN gsettings --version
 
-# Verify qmake installation
-RUN qmake --version
+# Copy all graphic libs to fix "ImportError: libGL.so.1: cannot open shared object file: No such file or directory"
+RUN find / -name 'libGL*' -exec cp -pv {} /usr/lib/ \; -exec ldconfig -n -v /usr/lib \;
+RUN find / -name 'libEGL*' -exec cp -pv {} /usr/lib/ \; -exec ldconfig -n -v /usr/lib \;
+RUN find / -name 'libx*' -exec cp -pv {} /usr/lib/ \; -exec ldconfig -n -v /usr/lib \;
+RUN find / -name 'libg*' -exec cp -pv {} /usr/lib/ \; -exec ldconfig -n -v /usr/lib \;
 
-# Install dependencies
+# Install PetalVault dependencies
 RUN --mount=type=cache,target=/root/.cache/pip \
     --mount=type=bind,source=requirements.txt,target=requirements.txt \
-    pip install -r requirements.txt
+    pip install --upgrade -r requirements.txt
 
 # Build
 WORKDIR /src
@@ -27,7 +70,7 @@ COPY . /src/
 ENV AM_I_IN_A_DOCKER_CONTAINER Yes
 RUN pyinstaller /src/main.spec
 
-# Build application image
+# Link image
 FROM alpine
 ENV PATH /app:$PATH
 
@@ -36,6 +79,8 @@ COPY --link --from=python:3.12-slim /lib6[4] /lib64
 COPY --link --from=build /app/dist/petalvault-* /app/petalvault
 
 WORKDIR /app
+
+# Copy internal files (just in case)
 COPY forms/ icons/ langs/ wordlist.txt /app/
 
 # Run main script

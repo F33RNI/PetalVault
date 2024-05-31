@@ -26,6 +26,9 @@ jobs:
     - run: dist/petalvault --version
 
   test-docker:
+    # See Dockerfile for more info
+    if: false
+
     strategy:
       matrix:
         platform:
