@@ -37,7 +37,7 @@ def decrypt_entry(encrypted: Dict, master_key: bytes) -> Dict or None:
 
     Args:
         encrypted (Dict): dictionary that contains "enc" and "iv" keys
-        master_key (bytes): mnemonic entropy as AES key (16 bytes) for v<2.0.0 or derived key (16 bytes) for v>=2.0.0
+        master_key (bytes): mnemonic entropy as AES key (16 bytes) for v<2.0.0 or derived key (32 bytes) for v>=2.0.0
 
     Returns:
         Dict or None: decrypted dictionary or None in case of error
@@ -82,7 +82,7 @@ def encrypt_entry(decrypted: Dict, master_key: bytes) -> Dict or None:
 
     Args:
         decrypted (Dict): decrypted dictionary. Must contains "id" key
-        master_key (bytes): mnemonic entropy as AES key (16 bytes) for v<2.0.0 or derived key (16 bytes) for v>=2.0.0
+        master_key (bytes): mnemonic entropy as AES key (16 bytes) for v<2.0.0 or derived key (32 bytes) for v>=2.0.0
 
     Returns:
         Dict or None: encrypted dictionary (with "enc" and "iv" keys) or None in case of error
