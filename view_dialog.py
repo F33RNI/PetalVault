@@ -191,7 +191,7 @@ class ViewDialog(QDialog):
             self.lb_index.setText("")
 
         # Encode and convert to QImage
-        qr = pyqrcode.create(self._datas[index], error="L", encoding="utf-8")
+        qr = pyqrcode.create(self._datas[index], error="Q", encoding="utf-8")
         self._image = QtGui.QImage.fromData(
             QtCore.QByteArray.fromBase64(qr.png_as_base64_str().encode("utf-8")), "PNG"
         )
