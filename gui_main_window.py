@@ -148,6 +148,7 @@ class GUIMainWindow(QMainWindow):
         self.btn_entry_add.clicked.connect(self._add_entry)
         self.btn_show_mnemonic.clicked.connect(self._show_mnemonic)
         self.btn_search.clicked.connect(lambda: self._render_vault_entries(filter_=self.le_search.text()))
+        self.le_search.returnPressed.connect(lambda: self._render_vault_entries(filter_=self.le_search.text()))
         self.btn_sync_from.clicked.connect(self._sync_from)
         self.btn_sync_to.clicked.connect(lambda: self._sync_to(clean_device=False))
 
