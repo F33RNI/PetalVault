@@ -18,6 +18,7 @@ import base64
 import json
 import logging
 import threading
+from typing import override
 
 import cv2
 import numpy as np
@@ -31,7 +32,7 @@ COLOR_ERROR = (136, 125, 219)
 WORDLIST_FILE = get_resource_path("wordlist.txt")
 
 
-class QRScannerThread(threading.Thread, QtCore.QObject):
+class QRScannerThread(threading.Thread, QtCore.QObject):  # pyright: ignore[reportUnsafeMultipleInheritance]
     # See ScanDialog for more info
     set_image_signal = QtCore.pyqtSignal(QtGui.QImage)
     received_part_flag_signal = QtCore.pyqtSignal(tuple)
@@ -69,6 +70,7 @@ class QRScannerThread(threading.Thread, QtCore.QObject):
 
         self._exit_flag = False
 
+    @override
     def run(self):
         """OpenCV scanning loop"""
         # Open camera and try to read the first frame
@@ -88,16 +90,15 @@ class QRScannerThread(threading.Thread, QtCore.QObject):
             while not self._exit_flag:
                 # Read one frame
                 ret, frame = capture.read()
-                if not ret or frame is None:
+                if not ret or not frame:
                     raise Exception(f"Error reading frame from camera {self._camera_index}")
 
                 data = None
+                color = COLOR_ERROR
                 try:
                     # Read QR codes
                     data, points, _ = detector.detectAndDecode(frame)
                     if data:
-                        color = COLOR_ERROR
-
                         # Decode actions (JSON)
                         if self._expected_data == "actions":
                             # "i": part index, "n": total parts, "acts": [{"act": sync, "id": 123, "iv": ., "enc": .}]
@@ -165,6 +166,7 @@ class QRScannerThread(threading.Thread, QtCore.QObject):
                         color = COLOR_OK
                 except Exception as e:
                     logging.warning(f"Unable to read or parse QR-code data {data}: {e}. Wrong QR code?")
+                    continue
 
                 # Draw bounding lines
                 if data:

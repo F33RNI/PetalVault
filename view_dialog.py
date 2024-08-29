@@ -18,7 +18,7 @@ import base64
 import datetime
 import json
 import os
-from typing import Dict, List
+from typing import override
 
 import pyqrcode
 from PyQt6 import QtCore, QtGui, uic
@@ -37,7 +37,7 @@ QR_LIMIT_BYTES = 500
 
 
 class ViewDialog(QDialog):
-    def __init__(self, parent: QWidget or None, translator_: Translator, config_manager_: ConfigManager):
+    def __init__(self, parent: QWidget | None, translator_: Translator, config_manager_: ConfigManager):
         super().__init__(parent)
 
         self.translator = translator_
@@ -61,13 +61,14 @@ class ViewDialog(QDialog):
         self.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Ignored)
         self.installEventFilter(self)
 
+    @override
     def show(
         self,
         title: str,
         description: str,
-        actions: List[Dict] or None = None,
-        sync_salt: bytes or None = None,
-        mnemonic: List[str] or None = None,
+        actions: list[dict[str, str]] | None = None,
+        sync_salt: bytes | None = None,
+        mnemonic: list[str] | None = None,
     ) -> None:
         """Non-blocking wrapper for _pre_show_or_exec()
         Opens dialog and shows 1st QR code
@@ -79,13 +80,14 @@ class ViewDialog(QDialog):
         self._index = 0
         self._show_qr()
 
+    @override
     def exec(
         self,
         title: str,
         description: str,
-        actions: List[Dict] or None = None,
-        sync_salt: bytes or None = None,
-        mnemonic: List[str] or None = None,
+        actions: list[dict[str, str]] | None = None,
+        sync_salt: bytes | None = None,
+        mnemonic: list[str] | None = None,
     ) -> None:
         """Blocking wrapper for _pre_show_or_exec()
         Opens dialog and shows 1st QR code
@@ -101,18 +103,18 @@ class ViewDialog(QDialog):
         self,
         title: str,
         description: str,
-        actions: List[Dict] or None = None,
-        sync_salt: bytes or None = None,
-        mnemonic: List[str] or None = None,
+        actions: list[dict[str, str]] | None = None,
+        sync_salt: bytes | None = None,
+        mnemonic: list[str] | None = None,
     ):
         """Prepares dialog
 
         Args:
             title (str): dialog title text
             description (str): dialog description text
-            actions (List[Dict] or None, optional): list of json objects to sync. Defaults to None
-            sync_salt (bytes or None, optional): salt of sync key (all actions must be encrypted). Defaults to None
-            mnemonic (List[str] or None, optional): list of mnemonic words. Defaults to None
+            actions (list[dict[str, str]] | None, optional): list of json objects to sync. Defaults to None
+            sync_salt (bytes | None, optional): salt of sync key (all actions must be encrypted). Defaults to None
+            mnemonic (list[str] | None, optional): list of mnemonic words. Defaults to None
         """
         # Translate buttons
         self.button_box.button(QDialogButtonBox.StandardButton.Close).setText(self.translator.get("btn_close"))
@@ -132,7 +134,7 @@ class ViewDialog(QDialog):
             self._data_type = "mnemonic"
             self._datas.append(" ".join(mnemonic))
 
-        # List of actions -> parse and split (if needed)
+        # list of actions -> parse and split (if needed)
         elif actions is not None:
             self._data_type = "actions"
 
@@ -170,16 +172,16 @@ class ViewDialog(QDialog):
             self.btn_next.hide()
 
     @QtCore.pyqtSlot()
-    def _show_qr(self, index: int or None = None) -> None:
+    def _show_qr(self, index: int | None = None) -> None:
         """Draws QR code with data from self._datas
 
         Args:
-            index (int or None, optional): QR code index or None to use self._index. Defaults to None
+            index (int | None, optional): QR code index | None to use self._index. Defaults to None
         """
         if index is None:
             index = self._index
 
-        if self._datas is None or index >= len(self._datas) or index < 0:
+        if not self._datas or index >= len(self._datas) or index < 0:
             return
 
         self._index = index
@@ -242,7 +244,8 @@ class ViewDialog(QDialog):
         )
         image_scaled.save(file_name)
 
-    def eventFilter(self, obj, event):
+    @override
+    def eventFilter(self, obj: QtCore.QObject | None, event: QtCore.QEvent | None):
         """Dirty way to resize image"""
         if event.type() == QtCore.QEvent.Type.Resize:
             if self._image is not None:

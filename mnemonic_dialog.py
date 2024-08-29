@@ -17,7 +17,7 @@ If not, see <http://www.gnu.org/licenses/>.
 import gc
 import logging
 import os
-from typing import List
+from typing import override
 
 from mnemonic import Mnemonic
 from PyQt6 import QtCore, uic
@@ -48,7 +48,7 @@ WORDLIST_FILE = get_resource_path("wordlist.txt")
 class MnemonicDialog(QDialog):
     result_signal = QtCore.pyqtSignal(object)
 
-    def __init__(self, parent: QWidget or None, translator_: Translator, config_manager_: ConfigManager):
+    def __init__(self, parent: QWidget | None, translator_: Translator, config_manager_: ConfigManager):
         super().__init__(parent)
 
         self.translator = translator_
@@ -100,14 +100,15 @@ class MnemonicDialog(QDialog):
         # On exit
         self.finished.connect(lambda: self._finished(canceled=True))
 
+    @override
     def show(
         self,
         title: str,
         description: str,
-        initial_phrase: List[str] or None = None,
+        initial_phrase: list[str] | None = None,
         random: bool = True,
         read_only: bool = False,
-    ):
+    ) -> None:
         """Non-blocking wrapper for _pre_show_or_exec()
 
         Connect result_signal to catch result
@@ -115,24 +116,25 @@ class MnemonicDialog(QDialog):
         self._pre_show_or_exec(title, description, initial_phrase, random, read_only)
         super().show()
 
+    @override
     def exec(
         self,
         title: str,
         description: str,
-        initial_phrase: List[str] or None = None,
+        initial_phrase: list[str] | None = None,
         random: bool = True,
         read_only: bool = False,
-    ) -> List[str] or None:
+    ) -> list[str] | None:
         """Blocking wrapper for _pre_show_or_exec()
 
         Returns:
-            List[str] or None: mnemonic phrase as list of words or None in case of dialog canceled
+            list[str] or None: mnemonic phrase as list of words or None in case of dialog canceled
         """
         cancel_flag = {}
         mnemonic = []
 
         @QtCore.pyqtSlot(object)
-        def _catch_finished(mnemonic_: List[str] or None):
+        def _catch_finished(mnemonic_: list[str] | None):
             if mnemonic_ is None:
                 cancel_flag["cancel"] = True
                 return
@@ -160,7 +162,7 @@ class MnemonicDialog(QDialog):
         self,
         title: str,
         description: str,
-        initial_phrase: List[str] or None = None,
+        initial_phrase: list[str] | None = None,
         random: bool = True,
         read_only: bool = False,
     ) -> None:
@@ -169,7 +171,7 @@ class MnemonicDialog(QDialog):
         Args:
             title (str): dialog title text
             description (str): dialog description text
-            initial_phrase (List[str] or None, optional): list of words to fill in. Defaults to None
+            initial_phrase (list[str] | None, optional): list of words to fill in. Defaults to None
             random (bool, optional): True to fill with random data instead of empty one in case of no initial_phrase
             read_only (bool, optional): True to only allow copying and showing QR (no modify). Defaults to False
         """
@@ -263,8 +265,8 @@ class MnemonicDialog(QDialog):
         )
 
     @QtCore.pyqtSlot(object)
-    def _scan_qr_result(self, data: str or List or None = None) -> None:
-        if not isinstance(data, List):
+    def _scan_qr_result(self, data: str | list[str] | None = None) -> None:
+        if not isinstance(data, list):
             return
         for i, line_edit in enumerate(self._line_edits):
             if i >= len(data):
@@ -311,11 +313,11 @@ class MnemonicDialog(QDialog):
                 self._words[i] = ""
             self._completing_flags[i] = False
 
-    def _check_get(self) -> List[str] or None:
+    def _check_get(self) -> list[str] | None:
         """Checks if all words are in the wordlist and can be converted into entropy and returns mnemonic phrase
 
         Returns:
-            List[str] or None: mnemonic phrase as list or None in case of error
+            list[str] or None: mnemonic phrase as list or None in case of error
         """
         # Check words
         words = []
@@ -350,14 +352,14 @@ class MnemonicDialog(QDialog):
 
         return words
 
-    def _add_word_input(self, id_: int, row: int, col: int, word: str or None = None):
+    def _add_word_input(self, id_: int, row: int, col: int, word: str | None = None):
         """Adds input field
 
         Args:
             id_ (int): absolute index (0 - N)
             row (int): self.layout_words row index
             col (int): self.layout_words column index
-            word (str or None, optional): initial value. Defaults to None
+            word (str | None, optional): initial value. Defaults to None
         """
         logging.debug(f"Adding word with ID {id_}")
 

@@ -76,12 +76,12 @@ class Translator:
         # Print final number of languages
         logging.debug(f"Loaded {len(self.langs)} languages")
 
-    def get(self, message_key: str, lang_id: str or None = None) -> Any:
+    def get(self, message_key: str, lang_id: str | None = None) -> Any:
         """Retrieves message from language
 
         Args:
             message_key (str): key from lang file
-            lang_id (str or None, optional): ID of language or None to use self.lang_id
+            lang_id (str | None, optional): ID of language or None to use self.lang_id
 
         Returns:
             Any: values of message_key or default_value

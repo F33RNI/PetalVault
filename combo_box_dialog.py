@@ -14,20 +14,18 @@ You should have received a copy of the GNU General Public License along with thi
 If not, see <http://www.gnu.org/licenses/>.
 """
 
-from typing import List
-
 from PyQt6.QtWidgets import QComboBox, QDialog, QDialogButtonBox, QVBoxLayout, QWidget
 
 from _version import __version__
 
 
-def combo_box_dialog(parent: QWidget or None, title: str, items: List[str]) -> int or None:
+def combo_box_dialog(parent: QWidget | None, title: str, items: list[str]) -> int | None:
     """Creates dialog contains combobox
 
     Args:
         parent (QWidget or None): parent widget
         title (str): dialog title
-        items (List[str]): list of combobox items
+        items (list[str]): list of combobox items
 
     Returns:
         int or None: selected index
@@ -39,7 +37,7 @@ def combo_box_dialog(parent: QWidget or None, title: str, items: List[str]) -> i
 
 
 class _ComboBoxDialog(QDialog):
-    def __init__(self, parent: QWidget or None, title: str, items: List[str]):
+    def __init__(self, parent: QWidget | None, title: str, items: list[str]):
         super().__init__(parent)
 
         self.setWindowTitle(title)

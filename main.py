@@ -69,6 +69,7 @@ def main() -> None:
     # pylint: disable=import-outside-toplevel
     from config_manager import ConfigManager
     from gui_wrapper import GUIWrapper
+
     # pylint: enable=import-outside-toplevel
 
     # Initialize class instances

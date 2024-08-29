@@ -16,7 +16,7 @@ If not, see <http://www.gnu.org/licenses/>.
 
 import logging
 import os
-from typing import Any, Dict, List, Tuple
+from typing import Any, override
 
 from PyQt6 import QtCore, QtGui, uic
 from PyQt6.QtGui import QPixmap
@@ -37,10 +37,10 @@ STYLESHEET_LABEL_RECEIVED = "background-color: #6ad0be;"
 
 class ScanDialog(QDialog):
     # Connect this to catch result
-    # List[str] or Tuple[List[Dict], bytes] or None: mnemonic, (list of actions, sync salt) or None if canceled
+    # list[str] or tuple[list[dict], bytes] | None: mnemonic, (list of actions, sync salt) or None if canceled
     result_signal = QtCore.pyqtSignal(object)
 
-    def __init__(self, parent: QWidget or None, translator_: Translator, config_manager_: ConfigManager):
+    def __init__(self, parent: QWidget | None, translator_: Translator, config_manager_: ConfigManager):
         super().__init__(parent)
 
         self.translator = translator_
@@ -95,11 +95,11 @@ class ScanDialog(QDialog):
         self.lb_preview.setPixmap(pixmap)
 
     @QtCore.pyqtSlot(tuple)
-    def _set_received_part_flag(self, part_idx_total: Tuple[int, int]):
+    def _set_received_part_flag(self, part_idx_total: tuple[int, int]):
         """Multiple QR parts callback
 
         Args:
-            part_idx_total (Tuple[int, int]): (current part starting from 0, total N of parts)
+            part_idx_total (tuple[int, int]): (current part starting from 0, total N of parts)
         """
         part_idx, parts_total = part_idx_total
 
@@ -116,35 +116,40 @@ class ScanDialog(QDialog):
         # Set label
         self._parts_widgets[part_idx].setStyleSheet(STYLESHEET_LABEL_RECEIVED)
 
+    @override
     def show(self, title: str, description: str, expected_data: str):
         """Non-blocking wrapper for _pre_show_or_exec()
 
         Connect result_signal to catch result
-        List[str] or Tuple[List[Dict], bytes] or None: mnemonic, (list of actions, sync salt) or None if canceled
+        list[str] or tuple[list[dict], bytes] | None: mnemonic, (list of actions, sync salt) or None if canceled
         """
         self._pre_show_or_exec(title, description, expected_data)
         super().show()
 
-    def exec(self, title: str, description: str, expected_data: str) -> List[str] or Tuple[List[Dict], bytes] or None:
+    @override
+    def exec(
+        self, title: str, description: str, expected_data: str
+    ) -> list[str] | tuple[list[dict[str, str]], bytes] | None:
         """Blocking wrapper for _pre_show_or_exec()
 
         Returns:
-            List[str] or Tuple[List[Dict], bytes] or None: mnemonic, (list of actions, sync salt) or None if canceled
+            list[str] | tuple[list[dict[str, str]], bytes] | None: mnemonic,
+            (list of actions, sync salt) or None if canceled
         """
         mnemonic_or_actions = []
         sync_salt = {"salt": None}
 
         @QtCore.pyqtSlot(object)
-        def _catch_finished(result_: List[str] or Tuple[List[Dict], bytes] or None):
+        def _catch_finished(result_: list[str] | tuple[list[dict[str, str]], bytes] | None):
             if result_ is None:
                 return
 
-            if isinstance(result_, Tuple):
+            if isinstance(result_, tuple):
                 for action in result_[0]:
                     mnemonic_or_actions.append(action)
                 sync_salt["salt"] = result_[1]
 
-            elif isinstance(result_, List):
+            else:
                 for word in result_:
                     mnemonic_or_actions.append(word)
 

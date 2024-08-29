@@ -23,16 +23,18 @@ from typing import Any
 from _version import __version__
 
 # Crude way to get default language
+# pyright: reportConstantRedefinition=none
 _LOCALE = "eng"
 try:
     _LOCALE = locale.getlocale()[0]
 except:
     pass
 
+LANG_ID_DEFAULT = "eng"
 try:
     LANG_ID_DEFAULT = "rus" if _LOCALE.startswith("ru") else "eng"
 except:
-    LANG_ID_DEFAULT = "eng"
+    pass
 
 CONFIG_DEFAULT = {"version": __version__, "lang_id": LANG_ID_DEFAULT, "camera_index": 0}
 
@@ -58,7 +60,7 @@ class ConfigManager:
                 else:
                     logging.warning(f"Unable to load config from {config_file}")
 
-    def get(self, key: str, default_value: Any or None = None) -> Any:
+    def get(self, key: str, default_value: Any | None = None) -> Any:
         """Retrieves value from config by key
 
         Args:

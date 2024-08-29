@@ -20,7 +20,6 @@ import json
 import logging
 import secrets
 import zlib
-from typing import Dict, List, Tuple
 
 from Crypto.Cipher import AES
 from Crypto.Protocol.KDF import scrypt
@@ -32,15 +31,15 @@ from _version import __version__
 MASTER_KEY_COST = 2**16
 
 
-def decrypt_entry(encrypted: Dict, master_key: bytes) -> Dict or None:
+def decrypt_entry(encrypted: dict[str, str], master_key: bytes) -> dict[str, str] | None:
     """Decrypts and decompresses dictionary data
 
     Args:
-        encrypted (Dict): dictionary that contains "enc" and "iv" keys
+        encrypted (dict[str, str]): dictionary that contains "enc" and "iv" keys
         master_key (bytes): mnemonic entropy as AES key (16 bytes) for v<2.0.0 or derived key (32 bytes) for v>=2.0.0
 
     Returns:
-        Dict or None: decrypted dictionary or None in case of error
+        dict | None: decrypted dictionary or None in case of error
     """
     try:
         # Decrypt
@@ -77,15 +76,15 @@ def decrypt_entry(encrypted: Dict, master_key: bytes) -> Dict or None:
     return None
 
 
-def encrypt_entry(decrypted: Dict, master_key: bytes) -> Dict or None:
+def encrypt_entry(decrypted: dict[str, str], master_key: bytes) -> dict[str, str] | None:
     """Compresses and encrypts dictionary data
 
     Args:
-        decrypted (Dict): decrypted dictionary. Must contains "id" key
+        decrypted (dict[str, str]): decrypted dictionary. Must contains "id" key
         master_key (bytes): mnemonic entropy as AES key (16 bytes) for v<2.0.0 or derived key (32 bytes) for v>=2.0.0
 
     Returns:
-        Dict or None: encrypted dictionary (with "enc" and "iv" keys) or None in case of error
+        dict[str, str] | None: encrypted dictionary (with "enc" and "iv" keys) or None in case of error
     """
     try:
         # Convert to bytes and calculate checksum
@@ -115,15 +114,15 @@ def encrypt_entry(decrypted: Dict, master_key: bytes) -> Dict or None:
     return None
 
 
-def encrypt_mnemonic(mnemonic: List[str], master_password: str) -> Tuple[bytes, bytes, bytes]:
+def encrypt_mnemonic(mnemonic: list[str], master_password: str) -> tuple[bytes, bytes, bytes]:
     """Encrypts mnemonic with master password
 
     Args:
-        mnemonic (List[str]): mnemonic phrase to encrypt as list of words
+        mnemonic (list[str]): mnemonic phrase to encrypt as list of words
         master_password (str): strong master password
 
     Returns:
-        Tuple[bytes, bytes, bytes]: (padded and encrypted mnemonic with checksum, 32B salt of scrypt, 16B IV of AES)
+        tuple[bytes, bytes, bytes]: (padded and encrypted mnemonic with checksum, 32B salt of scrypt, 16B IV of AES)
     """
     # Derive key from master password
     master_salt_1 = secrets.token_bytes(32)
@@ -145,7 +144,7 @@ def encrypt_mnemonic(mnemonic: List[str], master_password: str) -> Tuple[bytes, 
 
 def decrypt_mnemonic(
     mnemonic_encrypted: bytes, master_password: str, master_salt_1: bytes, master_salt_2: bytes
-) -> List[str]:
+) -> list[str]:
     """Decrypts mnemonic with master password
 
     Args:
@@ -158,7 +157,7 @@ def decrypt_mnemonic(
         Exception: decrypt / check error
 
     Returns:
-        List[str]: mnemonic phrase as list of words
+        list[str]: mnemonic phrase as list of words
     """
     # Derive key from master password
     derived_key = scrypt(master_password.encode("utf-8"), master_salt_1, 32, N=MASTER_KEY_COST, r=8, p=1)
@@ -181,7 +180,7 @@ def decrypt_mnemonic(
     return mnemonic_bytes.decode("utf-8").split(" ")
 
 
-def decrypt_mnemonic_old(mnemonic_encrypted: bytes, master_password: str, iv: bytes) -> List[str]:
+def decrypt_mnemonic_old(mnemonic_encrypted: bytes, master_password: str, iv: bytes) -> list[str]:
     """Decrypts mnemonic in old way (below v2.0.0)
 
     Args:
@@ -190,7 +189,7 @@ def decrypt_mnemonic_old(mnemonic_encrypted: bytes, master_password: str, iv: by
         iv (bytes): 16 bytes IV of AES
 
     Returns:
-        List[str]: mnemonic phrase as list of words
+        list[str]: mnemonic phrase as list of words
     """
     # Convert password to 128 bit key
     master_password_hash = hashlib.sha256(hashlib.sha256(master_password.encode("utf-8")).digest()).digest()
@@ -205,15 +204,15 @@ def decrypt_mnemonic_old(mnemonic_encrypted: bytes, master_password: str, iv: by
     return mnemonic_unpadded.decode("utf-8").split(" ")
 
 
-def entropy_to_master_key(entropy: bytes, master_salt: bytes or None = None) -> Tuple[bytes, bytes]:
+def entropy_to_master_key(entropy: bytes, master_salt: bytes | None = None) -> tuple[bytes, bytes]:
     """Derives master key from entropy
 
     Args:
         entropy (bytes): 128-bit entropy from mnemonic
-        salt (bytes or None, optional): existing salt (32-bytes) or None to generate a new one. Defaults to None
+        salt (bytes | None, optional): existing salt (32-bytes) | None to generate a new one. Defaults to None
 
     Returns:
-        Tuple[bytes, bytes]: (32-bytes master key, 32 - bytes salt)
+        tuple[bytes, bytes]: (32-bytes master key, 32 - bytes salt)
     """
     if master_salt is None:
         master_salt = secrets.token_bytes(32)

@@ -18,6 +18,7 @@ import ctypes
 import logging
 import os
 import sys
+from typing import Any
 
 from PyQt6.QtWidgets import QApplication
 
@@ -37,7 +38,7 @@ class GUIWrapper:
 
         # Replace icon in taskbar
         if os.name == "nt":
-            logging.debug("Replacing icon in taskbar")
+            logging.debug("Replacing icon in taskbar")  # pyright:ignore[reportUnreachable]
             app_ip = "f3rni.petalvault.petalvault." + __version__
             ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(app_ip)
 
@@ -55,7 +56,7 @@ class GUIWrapper:
         return self.app.exec()
 
     # pylint: disable=unused-argument
-    def close(self, *args) -> None:
+    def close(self, *args: Any) -> None:  # pyright:ignore[reportUnusedParameter]
         """Closes application
         This can be connected with signal package
         """

@@ -23,7 +23,6 @@ import os
 import secrets
 import string
 import webbrowser
-from typing import Dict, List, Tuple
 
 import qdarktheme
 from packaging import version
@@ -165,11 +164,11 @@ class GUIMainWindow(QMainWindow):
         # Done
         logging.debug("GUI loading finished")
 
-    def _set_translations(self, lang_id: str or None = None) -> None:
+    def _set_translations(self, lang_id: str | None = None) -> None:
         """Loads list of available languages and translates some widgets on a main GUI
 
         Args:
-            lang_id (str or None, optional): None to load languages, ID (ex. "eng") to load it. Defaults to None
+            lang_id (str | None, optional): None to load languages, ID (ex. "eng") to load it. Defaults to None
         """
         # Load available languages
         if lang_id is None:
@@ -211,11 +210,11 @@ class GUIMainWindow(QMainWindow):
         self.btn_sync_from.setText(self.translator.get("btn_sync_from"))
         self.btn_entry_add.setText(self.translator.get("btn_entry_add"))
 
-    def _set_theme(self, theme: str or None = None) -> None:
+    def _set_theme(self, theme: str | None = None) -> None:
         """Sets GUI theme
 
         Args:
-            theme (str or None, optional): "light", "dark" or None to load from config. Defaults to None
+            theme (str | None, optional): "light", "dark" or None to load from config. Defaults to None
         """
         if theme is None:
             theme = self.config_manager.get("theme", "light")
@@ -309,7 +308,7 @@ class GUIMainWindow(QMainWindow):
 
         # Generate key from entropy and salt or use entropy (for old versions)
         sync_key = self._vault["entropy"]
-        if sync_salt is not None:
+        if not sync_salt:
             sync_key, _ = entropy_to_master_key(sync_key, sync_salt)
 
         # pylint: disable=not-an-iterable
@@ -382,11 +381,11 @@ class GUIMainWindow(QMainWindow):
         self.menu_delete_device.update()
         self.menu_delete_device.setEnabled(True)
 
-    def _open_vault(self, path: str or None = None, close_before: bool = True) -> None:
+    def _open_vault(self, path: str | None = None, close_before: bool = True) -> None:
         """Opens vault from path
 
         Args:
-            path (str or None, optional): None to ask user. Defaults to None
+            path (str | None, optional): None to ask user. Defaults to None
             close_before (bool, optional): close current vault before loading a new one. Defaults to True
 
         """
@@ -429,19 +428,18 @@ class GUIMainWindow(QMainWindow):
                             logging.debug("No master password provided")
                             return
 
-                # Ask for mnemonic
-                if not master_password:
-                    mnemonic = self.mnemonic_dialog.exec(
-                        self._vault["name"], self.translator.get("open_vault_mnemonic"), random=False
-                    )
-                    if mnemonic is None:
-                        logging.debug("No mnemonic phrase provided")
-                        return
-
-                # Try to build entropy
                 try:
+                    # Ask for mnemonic
+                    if not master_password:
+                        mnemonic = self.mnemonic_dialog.exec(
+                            self._vault["name"], self.translator.get("open_vault_mnemonic"), random=False
+                        )
+                        if mnemonic is None:
+                            logging.debug("No mnemonic phrase provided")
+                            return
+
                     # Use master password to decrypt mnemonic
-                    if master_password:
+                    else:
                         mnemonic_encrypted = base64.b64decode(self._vault["mnemonic_encrypted"].encode("utf-8"))
 
                         # Old PetalVault
@@ -663,14 +661,14 @@ class GUIMainWindow(QMainWindow):
         # Open this vault
         self._open_vault(filepath, close_before=False)
 
-    def _vault_save(self, filepath: str or None = None) -> str or None:
+    def _vault_save(self, filepath: str | None = None) -> str | None:
         """Saves current vault as filepath without secret keys
 
         Args:
-            filepath (str or None, optional): None to generate safe filepath. Defaults to None
+            filepath (str | None, optional): None to generate safe filepath. Defaults to None
 
         Returns:
-            str or None: path to saved file or None in case of error
+            str | None: path to saved file or None in case of error
         """
         if not self._vault:
             return
@@ -730,13 +728,13 @@ class GUIMainWindow(QMainWindow):
         return None
 
     def _vault_action(
-        self, action: Dict, sync_key: bytes or None = None, save: bool = True, rerender: bool = True
+        self, action: dict[str, str], sync_key: bytes | None = None, save: bool = True, rerender: bool = True
     ) -> bool:
         """Applies action to the current vault
 
         Args:
-            action (Dict): action as dictionary (encrypted or not)
-            sync_key (bytes or None, optional): master key (32 bytes) from sync / import or entropy (for v < 2.0.0)
+            action (dict[str, str]): action as dictionary (encrypted or not)
+            sync_key (bytes | None, optional): master key (32 bytes) from sync / import or entropy (for v < 2.0.0)
             save (bool, optional): save vault after. Defaults to True
             rerender (bool, optional): rerender vault after. Defaults to True
 
@@ -806,11 +804,11 @@ class GUIMainWindow(QMainWindow):
 
         return True
 
-    def _render_vault_entries(self, filter_: str or None = None) -> None:
+    def _render_vault_entries(self, filter_: str | None = None) -> None:
         """Removes all entries and renders them again
 
         Args:
-            filter_ (str or None, optional): search box text. Defaults to None
+            filter_ (str | None, optional): search box text. Defaults to None
         """
         if not self._vault:
             return
@@ -960,13 +958,13 @@ class GUIMainWindow(QMainWindow):
                         device_entries_and_salt = self._vault.get("devices", {})[device_name]
 
                         # New format (v >= 2.0.0)
-                        if isinstance(device_entries_and_salt, Dict):
+                        if isinstance(device_entries_and_salt, dict):
                             device_entries = device_entries_and_salt.get("entries", [])
                             device_salt = device_entries_and_salt["salt"]
                             device_salt = base64.b64decode(device_salt.encode("utf-8"))
 
                         # Old format (v < 2.0.0)
-                        elif isinstance(device_entries_and_salt, List):
+                        elif isinstance(device_entries_and_salt, list):
                             device_entries = device_entries_and_salt
 
                 # Create a new device
@@ -1059,7 +1057,7 @@ class GUIMainWindow(QMainWindow):
             if device_name:
                 if "devices" not in self._vault:
                     self._vault["devices"] = {}
-                if device_name not in self._vault["devices"] or isinstance(self._vault["devices"][device_name], List):
+                if device_name not in self._vault["devices"] or isinstance(self._vault["devices"][device_name], list):
                     self._vault["devices"][device_name] = {}
                 if "entries" not in self._vault["devices"][device_name]:
                     self._vault["devices"][device_name]["entries"] = []
@@ -1213,15 +1211,17 @@ class GUIMainWindow(QMainWindow):
             logging.error("Error deleting vault", exc_info=e)
             self._error_wrapper(self.translator.get("error_delete"), description=str(e))
 
-    def _id_to_entry(self, unique_id: str, entries: Dict or None = None) -> Tuple[int, Dict or None]:
+    def _id_to_entry(
+        self, unique_id: str, entries: list[dict[str, str]] | None = None
+    ) -> tuple[int, dict[str, str] | None]:
         """Finds entry in "entries_decrypted" or entries and it's current index by unique_id
 
         Args:
             unique_id (str): entry ID
-            entries (Dict or None, optional): entries to use instead of "entries_decrypted". Defaults to None
+            entries (list[dict[str, str]] | None, optional): entries to use instead of "entries_decrypted"
 
         Returns:
-            Tuple[int, Dict or None]: (index, entry as dictionary) or (-1, None) if not found
+            tuple[int, dict | None]: (index, entry as dictionary) or (-1, None) if not found
         """
         if entries is None:
             entries = self._vault.get("entries_decrypted", [])
@@ -1279,13 +1279,13 @@ class GUIMainWindow(QMainWindow):
             self.btn_sync_to.setEnabled(False)
             self.btn_sync_from.setEnabled(False)
 
-    def _error_wrapper(self, title: str, description: str or None = None, exception_text: str or None = None) -> None:
+    def _error_wrapper(self, title: str, description: str | None = None, exception_text: str | None = None) -> None:
         """Shows error message
 
         Args:
             title (str): dialog title and main text
-            description (str or None, optional): dialog description. Defaults to None
-            exception_text (str or None, optional): detailed text. Defaults to None
+            description (str | None, optional): dialog description. Defaults to None
+            exception_text (str | None, optional): detailed text. Defaults to None
         """
         error_msg = QMessageBox(self)
         error_msg.setIcon(QMessageBox.Icon.Critical)

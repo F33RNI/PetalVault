@@ -15,11 +15,12 @@ If not, see <http://www.gnu.org/licenses/>.
 """
 
 import logging
+from typing import Any
 
 from PyQt6.QtWidgets import QLayout
 
 
-def clear_layout(layout: QLayout) -> None:
+def clear_layout(layout: QLayout | Any) -> None:
     """Recursively removes all widgets and layouts from parent
 
     Args:

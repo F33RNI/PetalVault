@@ -1,0 +1,27 @@
+[tool.basedpyright]
+typeCheckingMode = "standard"
+
+defineConstant = { DEBUG = false }
+exclude = ["**/node_modules", "**/__pycache__", "build", "dist", "forms", "icons", "langs", "venv"]
+
+ignore = []
+include = ["."]
+
+reportMissingImports = "error"
+reportMissingTypeStubs = false
+
+enableTypeIgnoreComments = true
+
+reportArgumentType = "none"
+reportAttributeAccessIssue = "none"
+reportCallIssue = "none"
+reportIncompatibleMethodOverride = "none"
+reportOperatorIssue = "none"
+reportOptionalMemberAccess = "none"
+reportOptionalSubscript = "none"
+reportReturnType = "none"
+
+pythonPlatform = "Linux"
+pythonVersion = "3.12"
+
+executionEnvironments = [{ root = "." }]
