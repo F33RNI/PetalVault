@@ -1,6 +1,6 @@
 packaging==24.0
 mnemonic==0.21
-opencv-python==4.9.0.80
+opencv-python==4.10.0.84
 pycryptodome==3.20.0
 PyQRCode==1.2.1
 pypng==0.20220715.0
