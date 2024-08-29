@@ -90,7 +90,7 @@ class QRScannerThread(threading.Thread, QtCore.QObject):  # pyright: ignore[repo
             while not self._exit_flag:
                 # Read one frame
                 ret, frame = capture.read()
-                if not ret or not frame:
+                if not ret or frame is None:
                     raise Exception(f"Error reading frame from camera {self._camera_index}")
 
                 data = None

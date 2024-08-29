@@ -308,7 +308,7 @@ class GUIMainWindow(QMainWindow):
 
         # Generate key from entropy and salt or use entropy (for old versions)
         sync_key = self._vault["entropy"]
-        if not sync_salt:
+        if sync_salt is not None:
             sync_key, _ = entropy_to_master_key(sync_key, sync_salt)
 
         # pylint: disable=not-an-iterable
