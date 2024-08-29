@@ -1,8 +1,8 @@
-packaging==24.0
+packaging==24.1
 mnemonic==0.21
 opencv-python==4.10.0.84
 pycryptodome==3.20.0
 PyQRCode==1.2.1
 pypng==0.20220715.0
-PyQt6==6.7.0
+PyQt6==6.7.1
 git+https://github.com/F33RNI/PyQtDarkTheme.git@python3.12
